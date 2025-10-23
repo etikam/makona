@@ -1,0 +1,200 @@
+erDiagram
+    users ||--o{ otp_codes : "has"
+    users ||--o{ candidates : "submits"
+    users ||--o{ candidates : "reviews"
+    users ||--o{ votes : "casts"
+    users ||--o{ winners : "announces"
+    users ||--o{ activity_logs : "performs"
+    users ||--o{ email_notifications : "receives"
+    users ||--o{ site_configuration : "updates"
+    
+    categories ||--o{ candidates : "contains"
+    categories ||--o{ votes : "receives"
+    categories ||--o{ winners : "has"
+    
+    candidates ||--o{ candidate_files : "has"
+    candidates ||--o{ votes : "receives"
+    candidates ||--o| winners : "becomes"
+    
+    users {
+        bigint id PK
+        varchar password
+        datetime last_login
+        varchar email UK
+        varchar username UK
+        varchar first_name
+        varchar last_name
+        varchar phone
+        enum country
+        boolean is_verified
+        boolean is_active
+        boolean is_staff
+        boolean is_superuser
+        datetime date_joined
+        datetime created_at
+        datetime updated_at
+    }
+    
+    otp_codes {
+        bigint id PK
+        bigint user_id FK
+        char code
+        boolean is_used
+        datetime created_at
+        datetime expires_at
+        datetime used_at
+    }
+    
+    categories {
+        bigint id PK
+        varchar name
+        varchar slug UK
+        text description
+        varchar icon
+        varchar color_gradient
+        boolean is_active
+        int display_order
+        boolean requires_photo
+        int photo_min_count
+        int photo_max_count
+        boolean requires_video
+        boolean video_required
+        int max_video_duration_seconds
+        boolean requires_audio
+        boolean audio_required
+        int max_audio_duration_seconds
+        boolean requires_portfolio
+        boolean portfolio_required
+        varchar portfolio_file_types
+        datetime created_at
+        datetime updated_at
+    }
+    
+    candidates {
+        bigint id PK
+        bigint category_id FK
+        varchar first_name
+        varchar last_name
+        varchar email
+        varchar phone
+        enum country
+        text bio
+        text achievements
+        varchar facebook_url
+        varchar instagram_url
+        varchar youtube_url
+        varchar twitter_url
+        varchar linkedin_url
+        varchar website_url
+        enum status
+        text rejection_reason
+        bigint submitted_by_user_id FK
+        bigint reviewed_by_user_id FK
+        datetime submitted_at
+        datetime reviewed_at
+        int votes_count
+        int views_count
+        datetime created_at
+        datetime updated_at
+    }
+    
+    candidate_files {
+        bigint id PK
+        bigint candidate_id FK
+        enum file_type
+        varchar file_path
+        varchar file_name
+        bigint file_size
+        varchar mime_type
+        varchar title
+        text description
+        int duration_seconds
+        int display_order
+        boolean is_validated
+        text validation_notes
+        int width
+        int height
+        datetime uploaded_at
+        datetime updated_at
+    }
+    
+    votes {
+        bigint id PK
+        bigint user_id FK
+        bigint candidate_id FK
+        bigint category_id FK
+        varchar ip_address
+        varchar user_agent
+        boolean is_valid
+        text invalidation_reason
+        datetime invalidated_at
+        bigint invalidated_by_user_id FK
+        datetime voted_at
+        datetime updated_at
+    }
+    
+    winners {
+        bigint id PK
+        bigint candidate_id FK UK
+        bigint category_id FK
+        varchar edition_year
+        tinyint rank
+        int votes_count
+        decimal percentage
+        datetime announced_at
+        bigint announced_by_user_id FK
+        text special_mention
+        text prize_description
+        datetime created_at
+        datetime updated_at
+    }
+    
+    site_configuration {
+        bigint id PK
+        datetime candidature_start_date
+        datetime candidature_end_date
+        datetime voting_start_date
+        datetime voting_end_date
+        datetime ceremony_date
+        boolean results_published
+        boolean site_maintenance
+        boolean allow_candidatures
+        boolean allow_voting
+        int max_votes_per_user
+        int max_candidature_file_size_mb
+        text maintenance_message
+        text welcome_message
+        text voting_closed_message
+        varchar current_edition_year
+        datetime updated_at
+        bigint updated_by_user_id FK
+    }
+    
+    activity_logs {
+        bigint id PK
+        bigint user_id FK
+        enum action_type
+        varchar entity_type
+        bigint entity_id
+        text description
+        json metadata
+        varchar ip_address
+        varchar user_agent
+        datetime created_at
+    }
+    
+    email_notifications {
+        bigint id PK
+        bigint user_id FK
+        enum notification_type
+        varchar recipient_email
+        varchar subject
+        text body_html
+        text body_text
+        enum status
+        datetime sent_at
+        text error_message
+        tinyint attempts
+        datetime created_at
+        datetime updated_at
+    }

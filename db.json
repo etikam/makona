@@ -1,0 +1,1482 @@
+{
+    "database": {
+      "name": "makona_awards_2025",
+      "charset": "utf8mb4",
+      "collation": "utf8mb4_unicode_ci"
+    },
+    "tables": [
+      {
+        "name": "users",
+        "comment": "Utilisateurs de la plateforme (votants et administrateurs)",
+        "engine": "InnoDB",
+        "columns": [
+          {
+            "name": "id",
+            "type": "BIGINT UNSIGNED",
+            "auto_increment": true,
+            "primary_key": true
+          },
+          {
+            "name": "password",
+            "type": "VARCHAR(128)",
+            "not_null": true
+          },
+          {
+            "name": "last_login",
+            "type": "DATETIME(6)",
+            "nullable": true
+          },
+          {
+            "name": "email",
+            "type": "VARCHAR(255)",
+            "not_null": true,
+            "unique": true
+          },
+          {
+            "name": "username",
+            "type": "VARCHAR(150)",
+            "not_null": true,
+            "unique": true
+          },
+          {
+            "name": "first_name",
+            "type": "VARCHAR(150)",
+            "not_null": true
+          },
+          {
+            "name": "last_name",
+            "type": "VARCHAR(150)",
+            "not_null": true
+          },
+          {
+            "name": "phone",
+            "type": "VARCHAR(20)",
+            "nullable": true
+          },
+          {
+            "name": "country",
+            "type": "ENUM('Guinée', 'Libéria', 'Sierra Leone')",
+            "not_null": true,
+            "default": "Guinée"
+          },
+          {
+            "name": "is_verified",
+            "type": "BOOLEAN",
+            "not_null": true,
+            "default": false
+          },
+          {
+            "name": "is_active",
+            "type": "BOOLEAN",
+            "not_null": true,
+            "default": true
+          },
+          {
+            "name": "is_staff",
+            "type": "BOOLEAN",
+            "not_null": true,
+            "default": false
+          },
+          {
+            "name": "is_superuser",
+            "type": "BOOLEAN",
+            "not_null": true,
+            "default": false
+          },
+          {
+            "name": "date_joined",
+            "type": "DATETIME(6)",
+            "not_null": true,
+            "default": "CURRENT_TIMESTAMP(6)"
+          },
+          {
+            "name": "created_at",
+            "type": "DATETIME(6)",
+            "not_null": true,
+            "default": "CURRENT_TIMESTAMP(6)"
+          },
+          {
+            "name": "updated_at",
+            "type": "DATETIME(6)",
+            "not_null": true,
+            "default": "CURRENT_TIMESTAMP(6)",
+            "on_update": "CURRENT_TIMESTAMP(6)"
+          }
+        ],
+        "indexes": [
+          {
+            "name": "idx_email",
+            "columns": ["email"]
+          },
+          {
+            "name": "idx_country",
+            "columns": ["country"]
+          },
+          {
+            "name": "idx_is_verified",
+            "columns": ["is_verified"]
+          }
+        ]
+      },
+      {
+        "name": "otp_codes",
+        "comment": "Codes OTP à usage unique pour authentification par email",
+        "engine": "InnoDB",
+        "columns": [
+          {
+            "name": "id",
+            "type": "BIGINT UNSIGNED",
+            "auto_increment": true,
+            "primary_key": true
+          },
+          {
+            "name": "user_id",
+            "type": "BIGINT UNSIGNED",
+            "not_null": true
+          },
+          {
+            "name": "code",
+            "type": "CHAR(6)",
+            "not_null": true
+          },
+          {
+            "name": "is_used",
+            "type": "BOOLEAN",
+            "not_null": true,
+            "default": false
+          },
+          {
+            "name": "created_at",
+            "type": "DATETIME(6)",
+            "not_null": true,
+            "default": "CURRENT_TIMESTAMP(6)"
+          },
+          {
+            "name": "expires_at",
+            "type": "DATETIME(6)",
+            "not_null": true
+          },
+          {
+            "name": "used_at",
+            "type": "DATETIME(6)",
+            "nullable": true
+          }
+        ],
+        "foreign_keys": [
+          {
+            "column": "user_id",
+            "references": {
+              "table": "users",
+              "column": "id",
+              "on_delete": "CASCADE"
+            }
+          }
+        ],
+        "indexes": [
+          {
+            "name": "idx_user_id",
+            "columns": ["user_id"]
+          },
+          {
+            "name": "idx_code",
+            "columns": ["code"]
+          },
+          {
+            "name": "idx_expires_at",
+            "columns": ["expires_at"]
+          },
+          {
+            "name": "idx_is_used",
+            "columns": ["is_used"]
+          }
+        ]
+      },
+      {
+        "name": "categories",
+        "comment": "Catégories de compétition avec configuration des fichiers requis",
+        "engine": "InnoDB",
+        "columns": [
+          {
+            "name": "id",
+            "type": "BIGINT UNSIGNED",
+            "auto_increment": true,
+            "primary_key": true
+          },
+          {
+            "name": "name",
+            "type": "VARCHAR(100)",
+            "not_null": true
+          },
+          {
+            "name": "slug",
+            "type": "VARCHAR(100)",
+            "not_null": true,
+            "unique": true
+          },
+          {
+            "name": "description",
+            "type": "TEXT",
+            "not_null": true
+          },
+          {
+            "name": "icon",
+            "type": "VARCHAR(50)",
+            "not_null": true,
+            "comment": "Nom de l'icône Lucide React"
+          },
+          {
+            "name": "color_gradient",
+            "type": "VARCHAR(100)",
+            "not_null": true,
+            "comment": "Classes Tailwind pour le gradient"
+          },
+          {
+            "name": "is_active",
+            "type": "BOOLEAN",
+            "not_null": true,
+            "default": true
+          },
+          {
+            "name": "display_order",
+            "type": "INT",
+            "not_null": true,
+            "default": 0
+          },
+          {
+            "name": "requires_photo",
+            "type": "BOOLEAN",
+            "not_null": true,
+            "default": true
+          },
+          {
+            "name": "photo_min_count",
+            "type": "INT",
+            "not_null": true,
+            "default": 1
+          },
+          {
+            "name": "photo_max_count",
+            "type": "INT",
+            "not_null": true,
+            "default": 5
+          },
+          {
+            "name": "requires_video",
+            "type": "BOOLEAN",
+            "not_null": true,
+            "default": false
+          },
+          {
+            "name": "video_required",
+            "type": "BOOLEAN",
+            "not_null": true,
+            "default": false
+          },
+          {
+            "name": "max_video_duration_seconds",
+            "type": "INT",
+            "nullable": true,
+            "comment": "Durée max en secondes, NULL = illimité"
+          },
+          {
+            "name": "requires_audio",
+            "type": "BOOLEAN",
+            "not_null": true,
+            "default": false
+          },
+          {
+            "name": "audio_required",
+            "type": "BOOLEAN",
+            "not_null": true,
+            "default": false
+          },
+          {
+            "name": "max_audio_duration_seconds",
+            "type": "INT",
+            "nullable": true
+          },
+          {
+            "name": "requires_portfolio",
+            "type": "BOOLEAN",
+            "not_null": true,
+            "default": false
+          },
+          {
+            "name": "portfolio_required",
+            "type": "BOOLEAN",
+            "not_null": true,
+            "default": false
+          },
+          {
+            "name": "portfolio_file_types",
+            "type": "VARCHAR(255)",
+            "nullable": true,
+            "comment": "Types de fichiers acceptés séparés par virgule"
+          },
+          {
+            "name": "created_at",
+            "type": "DATETIME(6)",
+            "not_null": true,
+            "default": "CURRENT_TIMESTAMP(6)"
+          },
+          {
+            "name": "updated_at",
+            "type": "DATETIME(6)",
+            "not_null": true,
+            "default": "CURRENT_TIMESTAMP(6)",
+            "on_update": "CURRENT_TIMESTAMP(6)"
+          }
+        ],
+        "indexes": [
+          {
+            "name": "idx_slug",
+            "columns": ["slug"]
+          },
+          {
+            "name": "idx_is_active",
+            "columns": ["is_active"]
+          },
+          {
+            "name": "idx_display_order",
+            "columns": ["display_order"]
+          }
+        ]
+      },
+      {
+        "name": "candidates",
+        "comment": "Candidats aux Makona Awards avec statut de validation",
+        "engine": "InnoDB",
+        "columns": [
+          {
+            "name": "id",
+            "type": "BIGINT UNSIGNED",
+            "auto_increment": true,
+            "primary_key": true
+          },
+          {
+            "name": "category_id",
+            "type": "BIGINT UNSIGNED",
+            "not_null": true
+          },
+          {
+            "name": "first_name",
+            "type": "VARCHAR(100)",
+            "not_null": true
+          },
+          {
+            "name": "last_name",
+            "type": "VARCHAR(100)",
+            "not_null": true
+          },
+          {
+            "name": "email",
+            "type": "VARCHAR(255)",
+            "not_null": true
+          },
+          {
+            "name": "phone",
+            "type": "VARCHAR(20)",
+            "not_null": true
+          },
+          {
+            "name": "country",
+            "type": "ENUM('Guinée', 'Libéria', 'Sierra Leone')",
+            "not_null": true
+          },
+          {
+            "name": "bio",
+            "type": "TEXT",
+            "not_null": true
+          },
+          {
+            "name": "achievements",
+            "type": "TEXT",
+            "nullable": true,
+            "comment": "Réalisations principales"
+          },
+          {
+            "name": "facebook_url",
+            "type": "VARCHAR(255)",
+            "nullable": true
+          },
+          {
+            "name": "instagram_url",
+            "type": "VARCHAR(255)",
+            "nullable": true
+          },
+          {
+            "name": "youtube_url",
+            "type": "VARCHAR(255)",
+            "nullable": true
+          },
+          {
+            "name": "twitter_url",
+            "type": "VARCHAR(255)",
+            "nullable": true
+          },
+          {
+            "name": "linkedin_url",
+            "type": "VARCHAR(255)",
+            "nullable": true
+          },
+          {
+            "name": "website_url",
+            "type": "VARCHAR(255)",
+            "nullable": true
+          },
+          {
+            "name": "status",
+            "type": "ENUM('pending', 'approved', 'rejected')",
+            "not_null": true,
+            "default": "pending"
+          },
+          {
+            "name": "rejection_reason",
+            "type": "TEXT",
+            "nullable": true
+          },
+          {
+            "name": "submitted_by_user_id",
+            "type": "BIGINT UNSIGNED",
+            "nullable": true,
+            "comment": "Utilisateur qui a soumis (si applicable)"
+          },
+          {
+            "name": "reviewed_by_user_id",
+            "type": "BIGINT UNSIGNED",
+            "nullable": true
+          },
+          {
+            "name": "submitted_at",
+            "type": "DATETIME(6)",
+            "not_null": true,
+            "default": "CURRENT_TIMESTAMP(6)"
+          },
+          {
+            "name": "reviewed_at",
+            "type": "DATETIME(6)",
+            "nullable": true
+          },
+          {
+            "name": "votes_count",
+            "type": "INT UNSIGNED",
+            "not_null": true,
+            "default": 0
+          },
+          {
+            "name": "views_count",
+            "type": "INT UNSIGNED",
+            "not_null": true,
+            "default": 0
+          },
+          {
+            "name": "created_at",
+            "type": "DATETIME(6)",
+            "not_null": true,
+            "default": "CURRENT_TIMESTAMP(6)"
+          },
+          {
+            "name": "updated_at",
+            "type": "DATETIME(6)",
+            "not_null": true,
+            "default": "CURRENT_TIMESTAMP(6)",
+            "on_update": "CURRENT_TIMESTAMP(6)"
+          }
+        ],
+        "foreign_keys": [
+          {
+            "column": "category_id",
+            "references": {
+              "table": "categories",
+              "column": "id",
+              "on_delete": "RESTRICT"
+            }
+          },
+          {
+            "column": "submitted_by_user_id",
+            "references": {
+              "table": "users",
+              "column": "id",
+              "on_delete": "SET NULL"
+            }
+          },
+          {
+            "column": "reviewed_by_user_id",
+            "references": {
+              "table": "users",
+              "column": "id",
+              "on_delete": "SET NULL"
+            }
+          }
+        ],
+        "indexes": [
+          {
+            "name": "idx_category_id",
+            "columns": ["category_id"]
+          },
+          {
+            "name": "idx_status",
+            "columns": ["status"]
+          },
+          {
+            "name": "idx_country",
+            "columns": ["country"]
+          },
+          {
+            "name": "idx_submitted_at",
+            "columns": ["submitted_at"]
+          },
+          {
+            "name": "idx_votes_count",
+            "columns": ["votes_count"]
+          },
+          {
+            "name": "idx_category_status",
+            "columns": ["category_id", "status"]
+          },
+          {
+            "name": "idx_candidates_category_status_votes",
+            "columns": ["category_id", "status", "votes_count DESC"]
+          }
+        ]
+      },
+      {
+        "name": "candidate_files",
+        "comment": "Fichiers multimédias des candidats (photos, vidéos, portfolios)",
+        "engine": "InnoDB",
+        "columns": [
+          {
+            "name": "id",
+            "type": "BIGINT UNSIGNED",
+            "auto_increment": true,
+            "primary_key": true
+          },
+          {
+            "name": "candidate_id",
+            "type": "BIGINT UNSIGNED",
+            "not_null": true
+          },
+          {
+            "name": "file_type",
+            "type": "ENUM('photo', 'video', 'audio', 'portfolio', 'document')",
+            "not_null": true
+          },
+          {
+            "name": "file_path",
+            "type": "VARCHAR(500)",
+            "not_null": true,
+            "comment": "Chemin relatif dans MEDIA_ROOT"
+          },
+          {
+            "name": "file_name",
+            "type": "VARCHAR(255)",
+            "not_null": true,
+            "comment": "Nom original du fichier"
+          },
+          {
+            "name": "file_size",
+            "type": "BIGINT UNSIGNED",
+            "not_null": true,
+            "comment": "Taille en octets"
+          },
+          {
+            "name": "mime_type",
+            "type": "VARCHAR(100)",
+            "not_null": true
+          },
+          {
+            "name": "title",
+            "type": "VARCHAR(255)",
+            "nullable": true,
+            "comment": "Titre descriptif du fichier"
+          },
+          {
+            "name": "description",
+            "type": "TEXT",
+            "nullable": true
+          },
+          {
+            "name": "duration_seconds",
+            "type": "INT",
+            "nullable": true,
+            "comment": "Durée pour vidéo/audio"
+          },
+          {
+            "name": "display_order",
+            "type": "INT",
+            "not_null": true,
+            "default": 0
+          },
+          {
+            "name": "is_validated",
+            "type": "BOOLEAN",
+            "not_null": true,
+            "default": false
+          },
+          {
+            "name": "validation_notes",
+            "type": "TEXT",
+            "nullable": true
+          },
+          {
+            "name": "width",
+            "type": "INT",
+            "nullable": true
+          },
+          {
+            "name": "height",
+            "type": "INT",
+            "nullable": true
+          },
+          {
+            "name": "uploaded_at",
+            "type": "DATETIME(6)",
+            "not_null": true,
+            "default": "CURRENT_TIMESTAMP(6)"
+          },
+          {
+            "name": "updated_at",
+            "type": "DATETIME(6)",
+            "not_null": true,
+            "default": "CURRENT_TIMESTAMP(6)",
+            "on_update": "CURRENT_TIMESTAMP(6)"
+          }
+        ],
+        "foreign_keys": [
+          {
+            "column": "candidate_id",
+            "references": {
+              "table": "candidates",
+              "column": "id",
+              "on_delete": "CASCADE"
+            }
+          }
+        ],
+        "indexes": [
+          {
+            "name": "idx_candidate_id",
+            "columns": ["candidate_id"]
+          },
+          {
+            "name": "idx_file_type",
+            "columns": ["file_type"]
+          },
+          {
+            "name": "idx_display_order",
+            "columns": ["display_order"]
+          },
+          {
+            "name": "idx_candidate_type",
+            "columns": ["candidate_id", "file_type"]
+          },
+          {
+            "name": "idx_candidate_files_candidate_type_order",
+            "columns": ["candidate_id", "file_type", "display_order"]
+          }
+        ]
+      },
+      {
+        "name": "votes",
+        "comment": "Votes des utilisateurs - un vote par catégorie, modifiable",
+        "engine": "InnoDB",
+        "columns": [
+          {
+            "name": "id",
+            "type": "BIGINT UNSIGNED",
+            "auto_increment": true,
+            "primary_key": true
+          },
+          {
+            "name": "user_id",
+            "type": "BIGINT UNSIGNED",
+            "not_null": true
+          },
+          {
+            "name": "candidate_id",
+            "type": "BIGINT UNSIGNED",
+            "not_null": true
+          },
+          {
+            "name": "category_id",
+            "type": "BIGINT UNSIGNED",
+            "not_null": true,
+            "comment": "Dénormalisé pour performance"
+          },
+          {
+            "name": "ip_address",
+            "type": "VARCHAR(45)",
+            "nullable": true,
+            "comment": "IPv4 ou IPv6"
+          },
+          {
+            "name": "user_agent",
+            "type": "VARCHAR(500)",
+            "nullable": true
+          },
+          {
+            "name": "is_valid",
+            "type": "BOOLEAN",
+            "not_null": true,
+            "default": true,
+            "comment": "Pour invalider en cas de fraude"
+          },
+          {
+            "name": "invalidation_reason",
+            "type": "TEXT",
+            "nullable": true
+          },
+          {
+            "name": "invalidated_at",
+            "type": "DATETIME(6)",
+            "nullable": true
+          },
+          {
+            "name": "invalidated_by_user_id",
+            "type": "BIGINT UNSIGNED",
+            "nullable": true
+          },
+          {
+            "name": "voted_at",
+            "type": "DATETIME(6)",
+            "not_null": true,
+            "default": "CURRENT_TIMESTAMP(6)"
+          },
+          {
+            "name": "updated_at",
+            "type": "DATETIME(6)",
+            "not_null": true,
+            "default": "CURRENT_TIMESTAMP(6)",
+            "on_update": "CURRENT_TIMESTAMP(6)"
+          }
+        ],
+        "foreign_keys": [
+          {
+            "column": "user_id",
+            "references": {
+              "table": "users",
+              "column": "id",
+              "on_delete": "CASCADE"
+            }
+          },
+          {
+            "column": "candidate_id",
+            "references": {
+              "table": "candidates",
+              "column": "id",
+              "on_delete": "CASCADE"
+            }
+          },
+          {
+            "column": "category_id",
+            "references": {
+              "table": "categories",
+              "column": "id",
+              "on_delete": "CASCADE"
+            }
+          },
+          {
+            "column": "invalidated_by_user_id",
+            "references": {
+              "table": "users",
+              "column": "id",
+              "on_delete": "SET NULL"
+            }
+          }
+        ],
+        "unique_keys": [
+          {
+            "name": "unique_user_category_vote",
+            "columns": ["user_id", "category_id"]
+          }
+        ],
+        "indexes": [
+          {
+            "name": "idx_user_id",
+            "columns": ["user_id"]
+          },
+          {
+            "name": "idx_candidate_id",
+            "columns": ["candidate_id"]
+          },
+          {
+            "name": "idx_category_id",
+            "columns": ["category_id"]
+          },
+          {
+            "name": "idx_voted_at",
+            "columns": ["voted_at"]
+          },
+          {
+            "name": "idx_is_valid",
+            "columns": ["is_valid"]
+          },
+          {
+            "name": "idx_votes_user_category_valid",
+            "columns": ["user_id", "category_id", "is_valid"]
+          }
+        ]
+      },
+      {
+        "name": "winners",
+        "comment": "Lauréats annoncés par catégorie et édition",
+        "engine": "InnoDB",
+        "columns": [
+          {
+            "name": "id",
+            "type": "BIGINT UNSIGNED",
+            "auto_increment": true,
+            "primary_key": true
+          },
+          {
+            "name": "candidate_id",
+            "type": "BIGINT UNSIGNED",
+            "not_null": true,
+            "unique": true
+          },
+          {
+            "name": "category_id",
+            "type": "BIGINT UNSIGNED",
+            "not_null": true
+          },
+          {
+            "name": "edition_year",
+            "type": "VARCHAR(4)",
+            "not_null": true,
+            "default": "2025"
+          },
+          {
+            "name": "rank",
+            "type": "TINYINT UNSIGNED",
+            "not_null": true,
+            "default": 1,
+            "comment": "1 = Premier, 2 = Deuxième, 3 = Troisième"
+          },
+          {
+            "name": "votes_count",
+            "type": "INT UNSIGNED",
+            "not_null": true
+          },
+          {
+            "name": "percentage",
+            "type": "DECIMAL(5,2)",
+            "nullable": true,
+            "comment": "Pourcentage des votes"
+          },
+          {
+            "name": "announced_at",
+            "type": "DATETIME(6)",
+            "not_null": true
+          },
+          {
+            "name": "announced_by_user_id",
+            "type": "BIGINT UNSIGNED",
+            "not_null": true
+          },
+          {
+            "name": "special_mention",
+            "type": "TEXT",
+            "nullable": true,
+            "comment": "Mention spéciale ou commentaire du jury"
+          },
+          {
+            "name": "prize_description",
+            "type": "TEXT",
+            "nullable": true
+          },
+          {
+            "name": "created_at",
+            "type": "DATETIME(6)",
+            "not_null": true,
+            "default": "CURRENT_TIMESTAMP(6)"
+          },
+          {
+            "name": "updated_at",
+            "type": "DATETIME(6)",
+            "not_null": true,
+            "default": "CURRENT_TIMESTAMP(6)",
+            "on_update": "CURRENT_TIMESTAMP(6)"
+          }
+        ],
+        "foreign_keys": [
+          {
+            "column": "candidate_id",
+            "references": {
+              "table": "candidates",
+              "column": "id",
+              "on_delete": "RESTRICT"
+            }
+          },
+          {
+            "column": "category_id",
+            "references": {
+              "table": "categories",
+              "column": "id",
+              "on_delete": "RESTRICT"
+            }
+          },
+          {
+            "column": "announced_by_user_id",
+            "references": {
+              "table": "users",
+              "column": "id",
+              "on_delete": "RESTRICT"
+            }
+          }
+        ],
+        "unique_keys": [
+          {
+            "name": "unique_category_edition_rank",
+            "columns": ["category_id", "edition_year", "rank"]
+          }
+        ],
+        "indexes": [
+          {
+            "name": "idx_category_id",
+            "columns": ["category_id"]
+          },
+          {
+            "name": "idx_edition_year",
+            "columns": ["edition_year"]
+          },
+          {
+            "name": "idx_rank",
+            "columns": ["rank"]
+          },
+          {
+            "name": "idx_announced_at",
+            "columns": ["announced_at"]
+          }
+        ]
+      },
+      {
+        "name": "site_configuration",
+        "comment": "Configuration globale du site (singleton)",
+        "engine": "InnoDB",
+        "columns": [
+          {
+            "name": "id",
+            "type": "BIGINT UNSIGNED",
+            "primary_key": true,
+            "default": 1
+          },
+          {
+            "name": "candidature_start_date",
+            "type": "DATETIME(6)",
+            "not_null": true
+          },
+          {
+            "name": "candidature_end_date",
+            "type": "DATETIME(6)",
+            "not_null": true
+          },
+          {
+            "name": "voting_start_date",
+            "type": "DATETIME(6)",
+            "not_null": true
+          },
+          {
+            "name": "voting_end_date",
+            "type": "DATETIME(6)",
+            "not_null": true
+          },
+          {
+            "name": "ceremony_date",
+            "type": "DATETIME(6)",
+            "not_null": true
+          },
+          {
+            "name": "results_published",
+            "type": "BOOLEAN",
+            "not_null": true,
+            "default": false
+          },
+          {
+            "name": "site_maintenance",
+            "type": "BOOLEAN",
+            "not_null": true,
+            "default": false
+          },
+          {
+            "name": "allow_candidatures",
+            "type": "BOOLEAN",
+            "not_null": true,
+            "default": true
+          },
+          {
+            "name": "allow_voting",
+            "type": "BOOLEAN",
+            "not_null": true,
+            "default": true
+          },
+          {
+            "name": "max_votes_per_user",
+            "type": "INT",
+            "not_null": true,
+            "default": 8,
+            "comment": "Normalement 1 par catégorie = 8"
+          },
+          {
+            "name": "max_candidature_file_size_mb",
+            "type": "INT",
+            "not_null": true,
+            "default": 50
+          },
+          {
+            "name": "maintenance_message",
+            "type": "TEXT",
+            "nullable": true
+          },
+          {
+            "name": "welcome_message",
+            "type": "TEXT",
+            "nullable": true
+          },
+          {
+            "name": "voting_closed_message",
+            "type": "TEXT",
+            "nullable": true
+          },
+          {
+            "name": "current_edition_year",
+            "type": "VARCHAR(4)",
+            "not_null": true,
+            "default": "2025"
+          },
+          {
+            "name": "updated_at",
+            "type": "DATETIME(6)",
+            "not_null": true,
+            "default": "CURRENT_TIMESTAMP(6)",
+            "on_update": "CURRENT_TIMESTAMP(6)"
+          },
+          {
+            "name": "updated_by_user_id",
+            "type": "BIGINT UNSIGNED",
+            "nullable": true
+          }
+        ],
+        "foreign_keys": [
+          {
+            "column": "updated_by_user_id",
+            "references": {
+              "table": "users",
+              "column": "id",
+              "on_delete": "SET NULL"
+            }
+          }
+        ],
+        "check_constraints": [
+          {
+            "name": "singleton_check",
+            "condition": "id = 1"
+          }
+        ]
+      },
+      {
+        "name": "activity_logs",
+        "comment": "Logs des actions administratives pour traçabilité",
+        "engine": "InnoDB",
+        "columns": [
+          {
+            "name": "id",
+            "type": "BIGINT UNSIGNED",
+            "auto_increment": true,
+            "primary_key": true
+          },
+          {
+            "name": "user_id",
+            "type": "BIGINT UNSIGNED",
+            "not_null": true
+          },
+          {
+            "name": "action_type",
+            "type": "ENUM('candidate_approved', 'candidate_rejected', 'winner_announced', 'vote_invalidated', 'config_updated', 'category_updated', 'user_promoted', 'user_banned')",
+            "not_null": true
+          },
+          {
+            "name": "entity_type",
+            "type": "VARCHAR(50)",
+            "nullable": true,
+            "comment": "Type d'entité concernée (candidate, vote, etc.)"
+          },
+          {
+            "name": "entity_id",
+            "type": "BIGINT UNSIGNED",
+            "nullable": true,
+            "comment": "ID de l'entité concernée"
+          },
+          {
+            "name": "description",
+            "type": "TEXT",
+            "not_null": true
+          },
+          {
+            "name": "metadata",
+            "type": "JSON",
+            "nullable": true,
+            "comment": "Données additionnelles en JSON"
+          },
+          {
+            "name": "ip_address",
+            "type": "VARCHAR(45)",
+            "nullable": true
+          },
+          {
+            "name": "user_agent",
+            "type": "VARCHAR(500)",
+            "nullable": true
+          },
+          {
+            "name": "created_at",
+            "type": "DATETIME(6)",
+            "not_null": true,
+            "default": "CURRENT_TIMESTAMP(6)"
+          }
+        ],
+        "foreign_keys": [
+          {
+            "column": "user_id",
+            "references": {
+              "table": "users",
+              "column": "id",
+              "on_delete": "CASCADE"
+            }
+          }
+        ],
+        "indexes": [
+          {
+            "name": "idx_user_id",
+            "columns": ["user_id"]
+          },
+          {
+            "name": "idx_action_type",
+            "columns": ["action_type"]
+          },
+          {
+            "name": "idx_entity",
+            "columns": ["entity_type", "entity_id"]
+          },
+          {
+            "name": "idx_created_at",
+            "columns": ["created_at"]
+          }
+        ]
+      },
+      {
+        "name": "email_notifications",
+        "comment": "Historique des emails envoyés par la plateforme",
+        "engine": "InnoDB",
+        "columns": [
+          {
+            "name": "id",
+            "type": "BIGINT UNSIGNED",
+            "auto_increment": true,
+            "primary_key": true
+          },
+          {
+            "name": "user_id",
+            "type": "BIGINT UNSIGNED",
+            "nullable": true
+          },
+          {
+            "name": "notification_type",
+            "type": "ENUM('otp_code', 'candidature_received', 'candidature_approved', 'candidature_rejected', 'vote_confirmation', 'winner_announcement', 'system_notification')",
+            "not_null": true
+          },
+          {
+            "name": "recipient_email",
+            "type": "VARCHAR(255)",
+            "not_null": true
+          },
+          {
+            "name": "subject",
+            "type": "VARCHAR(255)",
+            "not_null": true
+          },
+          {
+            "name": "body_html",
+            "type": "TEXT",
+            "nullable": true
+          },
+          {
+            "name": "body_text",
+            "type": "TEXT",
+            "not_null": true
+          },
+          {
+            "name": "status",
+            "type": "ENUM('pending', 'sent', 'failed')",
+            "not_null": true,
+            "default": "pending"
+          },
+          {
+            "name": "sent_at",
+            "type": "DATETIME(6)",
+            "nullable": true
+          },
+          {
+            "name": "error_message",
+            "type": "TEXT",
+            "nullable": true
+          },
+          {
+            "name": "attempts",
+            "type": "TINYINT UNSIGNED",
+            "not_null": true,
+            "default": 0
+          },
+          {
+            "name": "created_at",
+            "type": "DATETIME(6)",
+            "not_null": true,
+            "default": "CURRENT_TIMESTAMP(6)"
+          },
+          {
+            "name": "updated_at",
+            "type": "DATETIME(6)",
+            "not_null": true,
+            "default": "CURRENT_TIMESTAMP(6)",
+            "on_update": "CURRENT_TIMESTAMP(6)"
+          }
+        ],
+        "foreign_keys": [
+          {
+            "column": "user_id",
+            "references": {
+              "table": "users",
+              "column": "id",
+              "on_delete": "SET NULL"
+            }
+          }
+        ],
+        "indexes": [
+          {
+            "name": "idx_user_id",
+            "columns": ["user_id"]
+          },
+          {
+            "name": "idx_notification_type",
+            "columns": ["notification_type"]
+          },
+          {
+            "name": "idx_status",
+            "columns": ["status"]
+          },
+          {
+            "name": "idx_created_at",
+            "columns": ["created_at"]
+          }
+        ]
+      }
+    ],
+    "triggers": [
+      {
+        "name": "after_vote_insert",
+        "table": "votes",
+        "timing": "AFTER",
+        "event": "INSERT",
+        "body": "IF NEW.is_valid = TRUE THEN UPDATE candidates SET votes_count = votes_count + 1 WHERE id = NEW.candidate_id; END IF;"
+      },
+      {
+        "name": "after_vote_update",
+        "table": "votes",
+        "timing": "AFTER",
+        "event": "UPDATE",
+        "body": "IF OLD.candidate_id != NEW.candidate_id OR OLD.is_valid != NEW.is_valid THEN IF OLD.is_valid = TRUE THEN UPDATE candidates SET votes_count = votes_count - 1 WHERE id = OLD.candidate_id; END IF; IF NEW.is_valid = TRUE THEN UPDATE candidates SET votes_count = votes_count + 1 WHERE id = NEW.candidate_id; END IF; END IF;"
+      },
+      {
+        "name": "after_vote_delete",
+        "table": "votes",
+        "timing": "AFTER",
+        "event": "DELETE",
+        "body": "IF OLD.is_valid = TRUE THEN UPDATE candidates SET votes_count = votes_count - 1 WHERE id = OLD.candidate_id; END IF;"
+      }
+    ],
+    "views": [
+      {
+        "name": "v_category_stats",
+        "query": "SELECT c.id AS category_id, c.name AS category_name, c.slug AS category_slug, COUNT(DISTINCT ca.id) AS total_candidates, COUNT(DISTINCT CASE WHEN ca.status = 'approved' THEN ca.id END) AS approved_candidates, COUNT(DISTINCT CASE WHEN ca.status = 'pending' THEN ca.id END) AS pending_candidates, COUNT(DISTINCT v.id) AS total_votes, COUNT(DISTINCT v.user_id) AS unique_voters FROM categories c LEFT JOIN candidates ca ON c.id = ca.category_id LEFT JOIN votes v ON c.id = v.category_id AND v.is_valid = TRUE GROUP BY c.id, c.name, c.slug"
+      },
+      {
+        "name": "v_candidates_ranking",
+        "query": "SELECT ca.id AS candidate_id, ca.first_name, ca.last_name, ca.category_id, c.name AS category_name, ca.country, ca.votes_count, RANK() OVER (PARTITION BY ca.category_id ORDER BY ca.votes_count DESC) AS category_rank, ROUND(ca.votes_count * 100.0 / NULLIF(cat_votes.total_votes, 0), 2) AS vote_percentage FROM candidates ca INNER JOIN categories c ON ca.category_id = c.id LEFT JOIN (SELECT category_id, COUNT(*) AS total_votes FROM votes WHERE is_valid = TRUE GROUP BY category_id) cat_votes ON ca.category_id = cat_votes.category_id WHERE ca.status = 'approved'"
+      }
+    ],
+    "initial_data": {
+      "site_configuration": [
+        {
+          "id": 1,
+          "candidature_start_date": "2025-10-01 00:00:00",
+          "candidature_end_date": "2025-12-15 23:59:59",
+          "voting_start_date": "2025-12-16 00:00:00",
+          "voting_end_date": "2025-12-27 23:59:59",
+          "ceremony_date": "2025-12-28 18:00:00",
+          "results_published": false,
+          "site_maintenance": false,
+          "current_edition_year": "2025"
+        }
+      ],
+      "categories": [
+        {
+          "name": "Danse",
+          "slug": "danse",
+          "description": "Célébration du mouvement et de l'expression corporelle. Récompense les danseurs qui captivent par leur talent et leur créativité.",
+          "icon": "Hand",
+          "color_gradient": "from-purple-500 to-pink-500",
+          "display_order": 1,
+          "requires_photo": true,
+          "photo_min_count": 1,
+          "photo_max_count": 5,
+          "requires_video": true,
+          "video_required": true,
+          "max_video_duration_seconds": 180,
+          "requires_audio": false,
+          "audio_required": false,
+          "max_audio_duration_seconds": null,
+          "requires_portfolio": false,
+          "portfolio_required": false,
+          "portfolio_file_types": null
+        },
+        {
+          "name": "Musique",
+          "slug": "musique",
+          "description": "Mélodies et rythmes qui font vibrer la région. Honore les artistes qui enchantent par leur voix et leurs compositions.",
+          "icon": "Music",
+          "color_gradient": "from-blue-500 to-cyan-500",
+          "display_order": 2,
+          "requires_photo": true,
+          "photo_min_count": 1,
+          "photo_max_count": 5,
+          "requires_video": false,
+          "video_required": false,
+          "max_video_duration_seconds": 300,
+          "requires_audio": true,
+          "audio_required": true,
+          "max_audio_duration_seconds": 300,
+          "requires_portfolio": false,
+          "portfolio_required": false,
+          "portfolio_file_types": null
+        },
+        {
+          "name": "Slam & Poésie",
+          "slug": "slam-poesie",
+          "description": "L'art des mots et de l'éloquence mis en lumière. Célèbre les poètes et slammeurs qui touchent les cœurs.",
+          "icon": "Mic",
+          "color_gradient": "from-orange-500 to-red-500",
+          "display_order": 3,
+          "requires_photo": true,
+          "photo_min_count": 1,
+          "photo_max_count": 3,
+          "requires_video": true,
+          "video_required": true,
+          "max_video_duration_seconds": 300,
+          "requires_audio": false,
+          "audio_required": false,
+          "max_audio_duration_seconds": null,
+          "requires_portfolio": false,
+          "portfolio_required": false,
+          "portfolio_file_types": null
+        },
+        {
+          "name": "Mode & Design",
+          "slug": "mode-design",
+          "description": "La créativité et le savoir-faire des stylistes locaux. Récompense l'innovation et l'esthétique dans la mode africaine.",
+          "icon": "Shirt",
+          "color_gradient": "from-pink-500 to-rose-500",
+          "display_order": 4,
+          "requires_photo": true,
+          "photo_min_count": 3,
+          "photo_max_count": 10,
+          "requires_video": false,
+          "video_required": false,
+          "max_video_duration_seconds": 180,
+          "requires_audio": false,
+          "audio_required": false,
+          "max_audio_duration_seconds": null,
+          "requires_portfolio": true,
+          "portfolio_required": false,
+          "portfolio_file_types": "pdf,jpg,png"
+        },
+        {
+          "name": "Humour",
+          "slug": "humour",
+          "description": "Les comédiens qui apportent la joie et le rire. Honore ceux qui utilisent l'humour pour divertir et sensibiliser.",
+          "icon": "Smile",
+          "color_gradient": "from-yellow-500 to-amber-500",
+          "display_order": 5,
+          "requires_photo": true,
+          "photo_min_count": 1,
+          "photo_max_count": 3,
+          "requires_video": true,
+          "video_required": true,
+          "max_video_duration_seconds": 300,
+          "requires_audio": false,
+          "audio_required": false,
+          "max_audio_duration_seconds": null,
+          "requires_portfolio": false,
+          "portfolio_required": false,
+          "portfolio_file_types": null
+        },
+        {
+          "name": "Innovation Tech",
+          "slug": "innovation-tech",
+          "description": "Les esprits brillants qui construisent le futur. Célèbre les innovateurs technologiques de la région.",
+          "icon": "Cpu",
+          "color_gradient": "from-green-500 to-emerald-500",
+          "display_order": 6,
+          "requires_photo": true,
+          "photo_min_count": 1,
+          "photo_max_count": 5,
+          "requires_video": true,
+          "video_required": true,
+          "max_video_duration_seconds": 300,
+          "requires_audio": false,
+          "audio_required": false,
+          "max_audio_duration_seconds": null,
+          "requires_portfolio": true,
+          "portfolio_required": false,
+          "portfolio_file_types": "pdf,pptx,docx"
+        },
+        {
+          "name": "Entrepreneuriat Social",
+          "slug": "entrepreneuriat-social",
+          "description": "Les projets qui créent un impact positif durable. Récompense les entrepreneurs qui changent des vies.",
+          "icon": "Users",
+          "color_gradient": "from-indigo-500 to-purple-500",
+          "display_order": 7,
+          "requires_photo": true,
+          "photo_min_count": 1,
+          "photo_max_count": 5,
+          "requires_video": true,
+          "video_required": true,
+          "max_video_duration_seconds": 300,
+          "requires_audio": false,
+          "audio_required": false,
+          "max_audio_duration_seconds": null,
+          "requires_portfolio": true,
+          "portfolio_required": false,
+          "portfolio_file_types": "pdf,pptx,docx"
+        },
+        {
+          "name": "Média d'Impact",
+          "slug": "media-impact",
+          "description": "Le journalisme qui informe et inspire le changement. Honore les médias qui éclairent et transforment la société.",
+          "icon": "Tv",
+          "color_gradient": "from-teal-500 to-cyan-500",
+          "display_order": 8,
+          "requires_photo": true,
+          "photo_min_count": 1,
+          "photo_max_count": 3,
+          "requires_video": false,
+          "video_required": false,
+          "max_video_duration_seconds": 600,
+          "requires_audio": false,
+          "audio_required": false,
+          "max_audio_duration_seconds": null,
+          "requires_portfolio": true,
+          "portfolio_required": true,
+          "portfolio_file_types": "pdf,docx,mp4"
+        }
+      ]
+    }
+  }

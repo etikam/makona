@@ -1,0 +1,7 @@
+## Pages
+- [Accueil - Makona Awards 2025](/home): Bienvenue à Makona Awards 2025 - Célébrez l
+- [Connexion - Makona Awards 2025](/auth): Connectez-vous pour voter et participer à Makona Awards 2025
+- [Galerie | Makona Awards 2025](/gallery): Explorez les moments forts des éditions précédentes des Makona Awards à travers notre galerie photo.
+- [Mon Profil - Makona Awards 2025](/dashboard): Gérez votre profil et suivez vos votes pour Makona Awards 2025
+- [Résultats - Makona Awards 2025](/results): Découvrez les résultats en temps réel des votes pour Makona Awards 2025
+- [Voter - Makona Awards 2025](/vote): Votez pour vos candidats préférés dans chaque catégorie de Makona Awards 2025
