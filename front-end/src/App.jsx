@@ -10,7 +10,6 @@ import HomePage from '@/pages/HomePage';
 import AuthPage from '@/pages/AuthPage';
 import DashboardPage from '@/pages/DashboardPage';
 import VotePage from '@/pages/VotePage';
-import ResultsPage from '@/pages/ResultsPage';
 import CategoryCandidatesPage from '@/pages/CategoryCandidatesPage';
 import CandidateDetailPage from '@/pages/CandidateDetailPage';
 import GalleryPage from '@/pages/GalleryPage';
@@ -86,7 +85,6 @@ function App() {
               <Route path="/vote" element={<VotePage user={user} onNavigate={handleNavigation} />} />
               <Route path="/vote/:categoryId" element={<CategoryCandidatesPage onNavigate={handleNavigation} />} />
               <Route path="/candidate/:candidateId" element={<CandidateDetailPage onNavigate={handleNavigation} />} />
-              <Route path="/results" element={<ResultsPage onNavigate={handleNavigation} />} />
               <Route path="/gallery" element={<GalleryPage onNavigate={handleNavigation} />} />
               
               {/* Routes authentifiées - Candidat */}

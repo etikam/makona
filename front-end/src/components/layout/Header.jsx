@@ -1,7 +1,7 @@
 
     import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Menu, X, User, LogOut, GalleryHorizontal } from 'lucide-react';
+import { Menu, X, User, LogOut, GalleryHorizontal, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const Header = ({ isAuthenticated, user, onNavigate, onLogout }) => {
@@ -11,7 +11,6 @@ const Header = ({ isAuthenticated, user, onNavigate, onLogout }) => {
     { label: 'Accueil', page: '/' },
     { label: 'Voter', page: '/vote' },
     { label: 'Galerie', page: '/gallery' },
-    { label: 'Résultats', page: '/results' },
   ];
 
   return (
@@ -51,6 +50,18 @@ const Header = ({ isAuthenticated, user, onNavigate, onLogout }) => {
           <div className="hidden md:flex items-center gap-4">
             {isAuthenticated ? (
               <>
+                {/* Lien Dashboard Admin pour les administrateurs */}
+                {user?.user_type === 'admin' && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => onNavigate('/admin/dashboard')}
+                    className="text-white hover:text-yellow-400"
+                  >
+                    <Settings className="w-4 h-4 mr-2" />
+                    Dashboard Admin
+                  </Button>
+                )}
+                
                 <Button
                   variant="ghost"
                   onClick={() => {
@@ -112,6 +123,20 @@ const Header = ({ isAuthenticated, user, onNavigate, onLogout }) => {
             ))}
             {isAuthenticated ? (
               <>
+                {/* Lien Dashboard Admin pour les administrateurs (mobile) */}
+                {user?.user_type === 'admin' && (
+                  <button
+                    onClick={() => {
+                      onNavigate('/admin/dashboard');
+                      setMobileMenuOpen(false);
+                    }}
+                    className="block w-full text-left py-2 text-gray-300 hover:text-yellow-400 transition-colors"
+                  >
+                    <Settings className="w-4 h-4 inline mr-2" />
+                    Dashboard Admin
+                  </button>
+                )}
+                
                 <button
                   onClick={() => {
                     if (user?.user_type === 'admin') {

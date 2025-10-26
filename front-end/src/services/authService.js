@@ -56,7 +56,7 @@ class AuthService {
   }
 
   /**
-   * Vérifier le code OTP et obtenir les tokens
+   * Vérifier le code OTP et connecter l'utilisateur
    */
   async verifyOTP(email, code) {
     try {
@@ -65,16 +65,13 @@ class AuthService {
         code,
       });
 
-      // Stocker les tokens
-      apiService.setToken(response.access);
-      localStorage.setItem('refresh_token', response.refresh);
+      // Stocker l'utilisateur
+      this.setStoredUser(response.user);
 
       return {
         success: true,
         message: response.message,
         user: response.user,
-        accessToken: response.access,
-        refreshToken: response.refresh,
       };
     } catch (error) {
       return {
@@ -96,11 +93,8 @@ class AuthService {
         includeAuth: false // Pas besoin d'authentification pour la connexion
       });
 
-      // Stocker l'utilisateur et la session
+      // Stocker l'utilisateur
       this.setStoredUser(response.user);
-      
-      // Pour l'authentification par session, on stocke juste l'utilisateur
-      // Le cookie de session sera géré automatiquement par Django
 
       return {
         success: true,
@@ -115,47 +109,19 @@ class AuthService {
     }
   }
 
-  /**
-   * Rafraîchir le token d'accès
-   */
-  async refreshToken() {
-    try {
-      const refreshToken = localStorage.getItem('refresh_token');
-      if (!refreshToken) {
-        throw new Error('No refresh token available');
-      }
-
-      const response = await apiService.post('/auth/token/refresh/', {
-        refresh: refreshToken,
-      });
-
-      apiService.setToken(response.access);
-      return {
-        success: true,
-        accessToken: response.access,
-      };
-    } catch (error) {
-      this.logout();
-      return {
-        success: false,
-        error: error.message,
-      };
-    }
-  }
 
   /**
    * Déconnexion
    */
   async logout() {
     try {
-      // Appeler l'endpoint de déconnexion pour invalider la session
+      // Appeler l'endpoint de déconnexion pour détruire la session
       await apiService.post('/auth/logout/');
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
       // Nettoyer le stockage local
       localStorage.removeItem('user');
-      // Pas besoin de clearToken() car on n'utilise plus JWT
     }
   }
 

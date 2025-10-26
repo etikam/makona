@@ -8,7 +8,6 @@ const API_BASE_URL = 'http://localhost:8000/api';
 class ApiService {
   constructor() {
     this.baseURL = API_BASE_URL;
-    this.token = localStorage.getItem('access_token');
   }
 
   /**
@@ -18,10 +17,6 @@ class ApiService {
     const headers = {
       'Content-Type': 'application/json',
     };
-
-    // Pour l'authentification par session, on n'a pas besoin d'ajouter de headers
-    // Django gère automatiquement les cookies de session
-    // On garde cette méthode pour la compatibilité future si on revient à JWT
 
     return headers;
   }
@@ -102,10 +97,7 @@ class ApiService {
    */
   async uploadFile(endpoint, formData, options = {}) {
     const url = `${this.baseURL}${endpoint}`;
-    const headers = {};
-
-    // Pour l'authentification par session, pas besoin d'Authorization header
-    // Les cookies de session sont automatiquement inclus
+    const headers = this.getHeaders(options.includeAuth !== false);
 
     try {
       const response = await fetch(url, {
@@ -121,27 +113,6 @@ class ApiService {
       console.error(`Upload Error [${endpoint}]:`, error);
       throw error;
     }
-  }
-
-  /**
-   * Met à jour le token d'authentification
-   */
-  setToken(token) {
-    this.token = token;
-    if (token) {
-      localStorage.setItem('access_token', token);
-    } else {
-      localStorage.removeItem('access_token');
-    }
-  }
-
-  /**
-   * Supprime le token d'authentification
-   */
-  clearToken() {
-    this.token = null;
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
   }
 }
 

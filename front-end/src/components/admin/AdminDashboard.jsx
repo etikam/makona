@@ -4,7 +4,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { Helmet } from 'react-helmet';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, 
   FileText, 
@@ -16,14 +17,29 @@ import {
   LogOut,
   Eye,
   Check,
-  X
+  X,
+  CheckSquare,
+  ThumbsUp,
+  ThumbsDown,
+  Plus,
+  Edit,
+  Trash2,
+  Download,
+  Tag,
+  UserCheck,
+  BarChart2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
 import candidatureService from '@/services/candidatureService';
 import authService from '@/services/authService';
+import UsersManagement from './UsersManagement';
+import CandidaturesManagement from './CandidaturesManagement';
+import CategoriesManagement from './CategoriesManagement';
+import CandidatesManagement from './CandidatesManagement';
 
 const AdminDashboard = ({ user, onLogout, onNavigate }) => {
+  const [activeTab, setActiveTab] = useState('candidates');
   const [candidatures, setCandidatures] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -36,6 +52,14 @@ const AdminDashboard = ({ user, onLogout, onNavigate }) => {
   useEffect(() => {
     loadCandidatures();
   }, []);
+
+  const tabs = [
+    { id: 'candidates', icon: Users, label: 'Gestion Candidats' },
+    { id: 'users', icon: UserCheck, label: 'Gestion Utilisateurs' },
+    { id: 'categories', icon: Tag, label: 'Gestion Catégories' },
+    { id: 'votes', icon: BarChart2, label: 'Visualisation des Votes' },
+    { id: 'settings', icon: Settings, label: 'Paramètres' },
+  ];
 
   const loadCandidatures = async () => {
     setIsLoading(true);
@@ -146,194 +170,131 @@ const AdminDashboard = ({ user, onLogout, onNavigate }) => {
     }
   };
 
-  return (
-    <div className="min-h-screen py-8 px-4">
-      <div className="container mx-auto max-w-7xl">
-        {/* En-tête */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="card-glass p-8 mb-8"
-        >
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-3xl font-bold text-white mb-2">
-                Dashboard Administrateur
-              </h1>
-              <p className="text-gray-400">
-                Bienvenue, {user.first_name} {user.last_name}
-              </p>
-            </div>
-            <Button
-              onClick={onLogout}
-              variant="outline"
-              className="text-red-400 border-red-400 hover:bg-red-400/20"
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Déconnexion
-            </Button>
-          </div>
+  const handleNotImplemented = () => {
+    toast({
+      title: "🚧 Fonctionnalité à venir !",
+      description: "Cette fonctionnalité n'est pas encore implémentée, mais vous pouvez la demander dans votre prochain message ! 🚀",
+    });
+  };
 
-          {/* Statistiques */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="bg-white/5 rounded-lg p-6 border border-white/10">
-              <div className="flex items-center gap-3">
-                <BarChart3 className="w-8 h-8 text-blue-400" />
-                <div>
-                  <p className="text-gray-400 text-sm">Total</p>
-                  <p className="text-2xl font-bold text-white">{stats.total}</p>
-                </div>
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'candidates':
+        return <CandidatesManagement />;
+      case 'users':
+        return <UsersManagement />;
+      case 'categories':
+        return <CategoriesManagement />;
+      case 'votes':
+        return (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+            <h2 className="text-3xl font-bold text-white mb-6">Visualisation des Votes</h2>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="card-glass p-6">
+                <h3 className="text-xl font-bold mb-4">Votes par Catégorie</h3>
+                <div className="h-64 bg-slate-800/50 rounded-lg flex items-center justify-center text-gray-500">Graphique à barres</div>
+              </div>
+              <div className="card-glass p-6">
+                <h3 className="text-xl font-bold mb-4">Progression des votes en temps réel</h3>
+                <div className="h-64 bg-slate-800/50 rounded-lg flex items-center justify-center text-gray-500">Graphique linéaire</div>
               </div>
             </div>
-
-            <div className="bg-white/5 rounded-lg p-6 border border-white/10">
-              <div className="flex items-center gap-3">
-                <Clock className="w-8 h-8 text-yellow-400" />
-                <div>
-                  <p className="text-gray-400 text-sm">En attente</p>
-                  <p className="text-2xl font-bold text-white">{stats.pending}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white/5 rounded-lg p-6 border border-white/10">
-              <div className="flex items-center gap-3">
-                <CheckCircle className="w-8 h-8 text-green-400" />
-                <div>
-                  <p className="text-gray-400 text-sm">Approuvées</p>
-                  <p className="text-2xl font-bold text-white">{stats.approved}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white/5 rounded-lg p-6 border border-white/10">
-              <div className="flex items-center gap-3">
-                <XCircle className="w-8 h-8 text-red-400" />
-                <div>
-                  <p className="text-gray-400 text-sm">Rejetées</p>
-                  <p className="text-2xl font-bold text-white">{stats.rejected}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Liste des candidatures */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="card-glass p-8"
-        >
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-white">
-              Gestion des Candidatures
-            </h2>
-            <Button
-              onClick={loadCandidatures}
-              variant="outline"
-              className="btn-secondary"
-            >
-              Actualiser
-            </Button>
-          </div>
-
-          {isLoading ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-400 mx-auto mb-4"></div>
-              <p className="text-gray-400">Chargement des candidatures...</p>
-            </div>
-          ) : candidatures.length === 0 ? (
-            <div className="text-center py-8">
-              <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-400 text-lg">
-                Aucune candidature pour le moment
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {candidatures.map((candidature, index) => (
-                <motion.div
-                  key={candidature.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="bg-white/5 rounded-lg p-6 border border-white/10"
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex-1">
-                      <h3 className="text-xl font-bold text-white mb-1">
-                        {candidature.candidate.first_name} {candidature.candidate.last_name}
-                      </h3>
-                      <p className="text-gray-400 mb-2">
-                        {candidature.category.name} • {candidature.candidate.email}
-                      </p>
-                      <p className="text-gray-400 text-sm">
-                        Soumise le {new Date(candidature.submitted_at).toLocaleDateString('fr-FR')}
-                      </p>
-                    </div>
-                    <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${getStatusColor(candidature.status)}`}>
-                      {getStatusIcon(candidature.status)}
-                      <span className="text-sm font-medium">
-                        {getStatusText(candidature.status)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {candidature.files && candidature.files.length > 0 && (
-                    <div className="mb-4">
-                      <p className="text-gray-400 text-sm mb-2">Fichiers soumis :</p>
-                      <div className="flex flex-wrap gap-2">
-                        {candidature.files.map((file, fileIndex) => (
-                          <span
-                            key={fileIndex}
-                            className="px-2 py-1 bg-white/10 rounded text-xs text-gray-300"
-                          >
-                            {file.file_type} - {file.title || 'Sans titre'}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
+          </motion.div>
+        );
+      case 'settings':
+        return (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+            <h2 className="text-3xl font-bold text-white mb-6">Paramètres de la Plateforme</h2>
+            <div className="space-y-6">
+              <div className="card-glass p-6">
+                <h3 className="text-xl font-bold mb-4">Gestion des Catégories</h3>
+                <div className="flex items-center justify-between bg-slate-800/50 p-3 rounded-lg">
+                  <p>Musique</p>
                   <div className="flex gap-2">
-                    <Button
-                      onClick={() => onNavigate(`admin/candidature/${candidature.id}`)}
-                      variant="outline"
-                      size="sm"
-                    >
-                      <Eye className="w-4 h-4 mr-2" />
-                      Voir détails
-                    </Button>
-                    
-                    {candidature.status === 'pending' && (
-                      <>
-                        <Button
-                          onClick={() => handleApproveCandidature(candidature.id)}
-                          size="sm"
-                          className="bg-green-600 hover:bg-green-700"
-                        >
-                          <Check className="w-4 h-4 mr-2" />
-                          Approuver
-                        </Button>
-                        <Button
-                          onClick={() => handleRejectCandidature(candidature.id)}
-                          size="sm"
-                          className="bg-red-600 hover:bg-red-700"
-                        >
-                          <X className="w-4 h-4 mr-2" />
-                          Rejeter
-                        </Button>
-                      </>
-                    )}
+                    <Button onClick={handleNotImplemented} size="icon" variant="ghost"><Edit className="w-4 h-4"/></Button>
+                    <Button onClick={handleNotImplemented} size="icon" variant="ghost" className="text-red-400"><Trash2 className="w-4 h-4"/></Button>
                   </div>
-                </motion.div>
-              ))}
+                </div>
+                <Button onClick={handleNotImplemented} className="btn-secondary mt-4 w-full"><Plus className="w-4 h-4 mr-2"/> Ajouter une catégorie</Button>
+              </div>
+              <div className="card-glass p-6">
+                <h3 className="text-xl font-bold mb-4">Chronomètre</h3>
+                <p className="text-gray-400 mb-2">Date de fin : 30 Décembre 2025, 23:59</p>
+                <Button onClick={handleNotImplemented} className="btn-secondary w-full">Modifier le chronomètre</Button>
+              </div>
+              <div className="card-glass p-6">
+                <h3 className="text-xl font-bold mb-4">Gestion des Résultats</h3>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <Button onClick={handleNotImplemented} className="btn-primary flex-1">Annoncer les résultats</Button>
+                  <Button onClick={handleNotImplemented} className="btn-secondary flex-1"><Download className="w-4 h-4 mr-2"/> Exporter les résultats (CSV)</Button>
+                </div>
+              </div>
             </div>
-          )}
-        </motion.div>
+          </motion.div>
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <>
+      <Helmet>
+        <title>Dashboard Admin - Makona Awards 2025</title>
+        <meta name="description" content="Gestion de la plateforme Makona Awards 2025." />
+      </Helmet>
+      <div className="min-h-screen flex">
+        <aside className="w-16 md:w-64 bg-slate-900/80 backdrop-blur-xl p-2 md:p-4 flex flex-col">
+          {/* En-tête utilisateur */}
+          <div className="mb-6 p-3 border-b border-white/10">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
+                <span className="text-sm font-bold text-black">
+                  {user?.first_name?.[0]}{user?.last_name?.[0]}
+                </span>
+              </div>
+              <div className="hidden md:block">
+                <p className="text-sm font-semibold text-white">
+                  {user?.first_name} {user?.last_name}
+                </p>
+                <p className="text-xs text-gray-400">Administrateur</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Navigation */}
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-4 p-3 rounded-lg w-full text-left transition-colors ${
+                activeTab === tab.id ? 'bg-yellow-500/10 text-yellow-400' : 'text-gray-400 hover:bg-white/5 hover:text-white'
+              }`}
+            >
+              <tab.icon className="w-6 h-6 shrink-0" />
+              <span className="hidden md:block font-semibold">{tab.label}</span>
+            </button>
+          ))}
+
+          {/* Bouton de déconnexion */}
+          <div className="mt-auto pt-4 border-t border-white/10">
+            <button
+              onClick={onLogout}
+              className="flex items-center gap-4 p-3 rounded-lg w-full text-left transition-colors text-red-400 hover:bg-red-500/10 hover:text-red-300"
+            >
+              <LogOut className="w-6 h-6 shrink-0" />
+              <span className="hidden md:block font-semibold">Déconnexion</span>
+            </button>
+          </div>
+        </aside>
+        
+        <main className="flex-1 p-6 md:p-10 bg-makona-pattern">
+          <AnimatePresence mode="wait">
+            {renderContent()}
+          </AnimatePresence>
+        </main>
       </div>
-    </div>
+    </>
   );
 };
 
