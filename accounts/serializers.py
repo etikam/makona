@@ -67,8 +67,8 @@ class UserSerializer(serializers.ModelSerializer):
     Serializer pour les données utilisateur
     """
     full_name = serializers.CharField(source='get_full_name', read_only=True)
-    is_candidate = serializers.BooleanField(source='is_candidate', read_only=True)
-    is_admin = serializers.BooleanField(source='is_admin', read_only=True)
+    is_candidate = serializers.BooleanField(read_only=True)
+    is_admin = serializers.BooleanField(read_only=True)
     
     class Meta:
         model = User
@@ -271,3 +271,4 @@ class PasswordChangeSerializer(serializers.Serializer):
         if not user.check_password(value):
             raise serializers.ValidationError("Ancien mot de passe incorrect.")
         return value
+

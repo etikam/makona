@@ -2,8 +2,6 @@
 URLs pour l'app accounts
 """
 from django.urls import path
-from rest_framework_simplejwt.views import TokenRefreshView
-
 from . import views
 
 app_name = 'accounts'
@@ -12,8 +10,7 @@ urlpatterns = [
     # Authentification
     path('register/', views.UserRegistrationView.as_view(), name='register'),
     path('login/', views.UserLoginView.as_view(), name='login'),
-    path('logout/', views.logout_view, name='logout'),
-    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('logout/', views.LogoutView.as_view(), name='logout'),
     
     # OTP
     path('otp/request/', views.OTPRequestView.as_view(), name='otp_request'),

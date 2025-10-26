@@ -3,6 +3,86 @@ Modèles pour l'app categories
 """
 from django.db import models
 from django.utils.text import slugify
+from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator, MaxValueValidator
+
+
+def validate_photo_extensions(value):
+    """Valide les extensions de fichiers pour les photos"""
+    allowed_extensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff']
+    if hasattr(value, 'name'):
+        extension = value.name.split('.')[-1].lower()
+        if extension not in allowed_extensions:
+            raise ValidationError(
+                f"Extension de fichier non autorisée pour les photos. "
+                f"Extensions autorisées: {', '.join(allowed_extensions)}"
+            )
+
+
+def validate_video_extensions(value):
+    """Valide les extensions de fichiers pour les vidéos"""
+    allowed_extensions = ['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm', 'mkv', 'm4v']
+    if hasattr(value, 'name'):
+        extension = value.name.split('.')[-1].lower()
+        if extension not in allowed_extensions:
+            raise ValidationError(
+                f"Extension de fichier non autorisée pour les vidéos. "
+                f"Extensions autorisées: {', '.join(allowed_extensions)}"
+            )
+
+
+def validate_audio_extensions(value):
+    """Valide les extensions de fichiers pour les audios"""
+    allowed_extensions = ['mp3', 'wav', 'flac', 'aac', 'ogg', 'wma', 'm4a']
+    if hasattr(value, 'name'):
+        extension = value.name.split('.')[-1].lower()
+        if extension not in allowed_extensions:
+            raise ValidationError(
+                f"Extension de fichier non autorisée pour les audios. "
+                f"Extensions autorisées: {', '.join(allowed_extensions)}"
+            )
+
+
+def validate_portfolio_extensions(value):
+    """Valide les extensions de fichiers pour les portfolios"""
+    allowed_extensions = ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'zip', 'rar', '7z']
+    if hasattr(value, 'name'):
+        extension = value.name.split('.')[-1].lower()
+        if extension not in allowed_extensions:
+            raise ValidationError(
+                f"Extension de fichier non autorisée pour les portfolios. "
+                f"Extensions autorisées: {', '.join(allowed_extensions)}"
+            )
+
+
+def validate_document_extensions(value):
+    """Valide les extensions de fichiers pour les documents"""
+    allowed_extensions = ['pdf', 'doc', 'docx', 'txt', 'rtf', 'odt', 'xls', 'xlsx', 'ppt', 'pptx']
+    if hasattr(value, 'name'):
+        extension = value.name.split('.')[-1].lower()
+        if extension not in allowed_extensions:
+            raise ValidationError(
+                f"Extension de fichier non autorisée pour les documents. "
+                f"Extensions autorisées: {', '.join(allowed_extensions)}"
+            )
+
+
+def validate_video_duration(value):
+    """Valide la durée maximale des vidéos"""
+    if value is not None:
+        if value < 1:
+            raise ValidationError("La durée minimale d'une vidéo doit être d'au moins 1 seconde")
+        if value > 3600:  # 1 heure max
+            raise ValidationError("La durée maximale d'une vidéo ne peut pas dépasser 3600 secondes (1 heure)")
+
+
+def validate_audio_duration(value):
+    """Valide la durée maximale des audios"""
+    if value is not None:
+        if value < 1:
+            raise ValidationError("La durée minimale d'un audio doit être d'au moins 1 seconde")
+        if value > 1800:  # 30 minutes max
+            raise ValidationError("La durée maximale d'un audio ne peut pas dépasser 1800 secondes (30 minutes)")
 
 
 class Category(models.Model):
@@ -55,13 +135,26 @@ class Category(models.Model):
         default=False,
         verbose_name="Audio obligatoire"
     )
+    requires_documents = models.BooleanField(
+        default=False,
+        verbose_name="Documents obligatoires"
+    )
+   
     max_video_duration = models.PositiveIntegerField(
         null=True,
         blank=True,
         verbose_name="Durée max vidéo (secondes)",
-        help_text="Durée maximale autorisée pour les vidéos (en secondes)"
+        help_text="Durée maximale autorisée pour les vidéos (en secondes)",
+        validators=[validate_video_duration]
     )
     
+    max_audio_duration = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name="Durée max audio (secondes)",
+        help_text="Durée maximale autorisée pour les audios (en secondes)",
+        validators=[validate_audio_duration]
+    )
     # Métadonnées
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Date de création")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Date de modification")
@@ -88,7 +181,9 @@ class Category(models.Model):
             'video': self.requires_video,
             'portfolio': self.requires_portfolio,
             'audio': self.requires_audio,
+            'documents': self.requires_documents,
             'max_video_duration': self.max_video_duration,
+            'max_audio_duration': self.max_audio_duration,
         }
     
     def get_required_file_types(self):
@@ -104,6 +199,8 @@ class Category(models.Model):
             required.append('portfolio')
         if self.requires_audio:
             required.append('audio')
+        if self.requires_documents:
+            required.append('documents')
         return required
     
     def validate_file_requirements(self, file_types):
@@ -118,3 +215,44 @@ class Category(models.Model):
             return False, f"Types de fichiers manquants: {', '.join(missing_types)}"
         
         return True, "Tous les fichiers requis sont présents"
+    
+    def get_file_validators(self):
+        """
+        Retourne un dictionnaire des validateurs d'extensions par type de média
+        """
+        return {
+            'photo': validate_photo_extensions,
+            'video': validate_video_extensions,
+            'audio': validate_audio_extensions,
+            'portfolio': validate_portfolio_extensions,
+            'documents': validate_document_extensions,
+        }
+    
+    def get_allowed_extensions(self):
+        """
+        Retourne un dictionnaire des extensions autorisées par type de média
+        """
+        return {
+            'photo': ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff'],
+            'video': ['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm', 'mkv', 'm4v'],
+            'audio': ['mp3', 'wav', 'flac', 'aac', 'ogg', 'wma', 'm4a'],
+            'portfolio': ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'zip', 'rar', '7z'],
+            'documents': ['pdf', 'doc', 'docx', 'txt', 'rtf', 'odt', 'xls', 'xlsx', 'ppt', 'pptx'],
+        }
+    
+    def get_duration_limits(self):
+        """
+        Retourne les limites de durée pour les médias
+        """
+        return {
+            'video': {
+                'min': 1,
+                'max': 3600,  # 1 heure
+                'current': self.max_video_duration
+            },
+            'audio': {
+                'min': 1,
+                'max': 1800,  # 30 minutes
+                'current': self.max_audio_duration
+            }
+        }

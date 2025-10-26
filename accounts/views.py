@@ -3,10 +3,9 @@ Vues pour l'app accounts
 """
 from rest_framework import status, generics, permissions
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.response impiort Response
+from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework_simplejwt.tokens import RefreshToken
-from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.hashers import make_password
 
 from .models import User, CandidateProfile, DeviceFingerprint
@@ -52,6 +51,7 @@ class OTPRequestView(APIView):
     Vue pour demander un code OTP
     """
     permission_classes = [permissions.AllowAny]
+    serializer_class = OTPRequestSerializer
     
     def post(self, request):
         serializer = OTPRequestSerializer(data=request.data)
@@ -72,9 +72,10 @@ class OTPRequestView(APIView):
 
 class OTPVerifyView(APIView):
     """
-    Vue pour vérifier un code OTP et obtenir les tokens JWT
+    Vue pour vérifier un code OTP et connecter l'utilisateur
     """
     permission_classes = [permissions.AllowAny]
+    serializer_class = OTPVerifySerializer
     
     def post(self, request):
         serializer = OTPVerifySerializer(data=request.data)
@@ -90,14 +91,11 @@ class OTPVerifyView(APIView):
             # Marquer l'utilisateur comme vérifié
             user = UserService.verify_user_email(user)
             
-            # Générer les tokens JWT
-            refresh = RefreshToken.for_user(user)
-            access_token = refresh.access_token
+            # Créer une session Django
+            login(request, user)
             
             return Response({
                 'message': 'Connexion réussie',
-                'access': str(access_token),
-                'refresh': str(refresh),
                 'user': UserSerializer(user).data
             }, status=status.HTTP_200_OK)
         
@@ -109,20 +107,18 @@ class UserLoginView(APIView):
     Vue pour la connexion utilisateur (avec mot de passe)
     """
     permission_classes = [permissions.AllowAny]
+    serializer_class = UserLoginSerializer
     
     def post(self, request):
         serializer = UserLoginSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.validated_data['user']
             
-            # Générer les tokens JWT
-            refresh = RefreshToken.for_user(user)
-            access_token = refresh.access_token
+            # Créer une session Django
+            login(request, user)
             
             return Response({
                 'message': 'Connexion réussie',
-                'access': str(access_token),
-                'refresh': str(refresh),
                 'user': UserSerializer(user).data
             }, status=status.HTTP_200_OK)
         
@@ -169,6 +165,7 @@ class DeviceFingerprintView(APIView):
     Vue pour créer un fingerprint de device
     """
     permission_classes = [permissions.AllowAny]
+    serializer_class = DeviceFingerprintCreateSerializer
     
     def post(self, request):
         serializer = DeviceFingerprintCreateSerializer(
@@ -192,6 +189,7 @@ class PasswordChangeView(APIView):
     Vue pour changer le mot de passe
     """
     permission_classes = [permissions.IsAuthenticated]
+    serializer_class = PasswordChangeSerializer
     
     def post(self, request):
         serializer = PasswordChangeSerializer(
@@ -223,16 +221,13 @@ class UserStatsView(APIView):
         return Response(stats, status=status.HTTP_200_OK)
 
 
-@api_view(['POST'])
-@permission_classes([permissions.IsAuthenticated])
-def logout_view(request):
+class LogoutView(APIView):
     """
-    Vue pour déconnecter un utilisateur (blacklister le refresh token)
+    Vue pour déconnecter un utilisateur
     """
-    try:
-        refresh_token = request.data["refresh"]
-        token = RefreshToken(refresh_token)
-        token.blacklist()
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def post(self, request):
+        # Déconnecter l'utilisateur (détruire la session)
+        logout(request)
         return Response({'message': 'Déconnexion réussie'}, status=status.HTTP_200_OK)
-    except Exception as e:
-        return Response({'error': 'Token invalide'}, status=status.HTTP_400_BAD_REQUEST)
