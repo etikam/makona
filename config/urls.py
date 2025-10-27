@@ -21,6 +21,9 @@ urlpatterns = [
     path("api/categories/", include("categories.urls")),
     path("api/candidatures/", include("candidates.urls")),
     
+    # Candidate API Endpoints
+    path("api/candidate/", include("accounts.candidate_urls")),
+    
     # Admin API Endpoints
     path("api/admin/accounts/", include("accounts.admin_urls")),
     path("api/admin/candidates/", include("candidates.admin_urls")),

@@ -1167,10 +1167,10 @@ const CandidatesManagement = () => {
                       <SelectContent>
                         {categories.map(category => (
                           <SelectItem key={category.id} value={category.id.toString()}>
-                            <div className="flex items-center gap-2">
-                              <span>{category.name}</span>
+                            <div className="flex items-center justify-between w-full">
+                              <span className="flex-1">{category.name}</span>
                               {category.category_class && (
-                                <Badge variant="outline" className="text-xs">
+                                <Badge variant="outline" className="text-xs ml-2 flex-shrink-0">
                                   {category.category_class.name}
                                 </Badge>
                               )}
@@ -1214,71 +1214,75 @@ const CandidatesManagement = () => {
                         Fichiers requis
                       </h4>
                       
-                      {fileTypes.map(fileType => (
-                        <div key={fileType.key} className="space-y-2">
-                          <Label className="text-white flex items-center gap-2">
-                            <span className="text-lg">{getFileIcon(fileType.key)}</span>
-                            {fileType.label} *
-                          </Label>
-                          
-                          <div className="border-2 border-dashed border-gray-600 rounded-lg p-4 hover:border-gray-500 transition-colors">
-                            <input
-                              type="file"
-                              multiple
-                              accept={fileType.key === 'photo' ? 'image/*' : 
-                                     fileType.key === 'video' ? 'video/*' :
-                                     fileType.key === 'audio' ? 'audio/*' :
-                                     fileType.key === 'portfolio' ? '.pdf,.doc,.docx,.txt' :
-                                     '.pdf,.doc,.docx,.txt'}
-                              onChange={(e) => handleFileChange(fileType.key, Array.from(e.target.files))}
-                              className="hidden"
-                              id={`file-${fileType.key}`}
-                            />
-                            <label
-                              htmlFor={`file-${fileType.key}`}
-                              className="cursor-pointer flex flex-col items-center justify-center py-4"
-                            >
-                              <div className={`text-4xl mb-2 ${getFileTypeColor(fileType.key)}`}>
-                                {getFileIcon(fileType.key)}
-                              </div>
-                              <p className="text-gray-300 text-sm">
-                                Cliquez pour sélectionner des {fileType.label.toLowerCase()}
-                              </p>
-                              <p className="text-gray-500 text-xs mt-1">
-                                {fileType.key === 'photo' ? 'JPG, PNG, GIF' :
-                                 fileType.key === 'video' ? 'MP4, AVI, MOV' :
-                                 fileType.key === 'audio' ? 'MP3, WAV, M4A' :
-                                 fileType.key === 'portfolio' ? 'PDF, DOC, DOCX, TXT' :
-                                 'PDF, DOC, DOCX, TXT'}
-                              </p>
-                            </label>
-                          </div>
-                          
-                          {/* Affichage des fichiers sélectionnés */}
-                          {candidatureData.files[fileType.key] && candidatureData.files[fileType.key].length > 0 && (
-                            <div className="space-y-2">
-                              <p className="text-sm text-gray-400">
-                                {candidatureData.files[fileType.key].length} fichier(s) sélectionné(s)
-                              </p>
-                              <div className="space-y-1">
-                                {candidatureData.files[fileType.key].map((file, index) => (
-                                  <div key={index} className="flex items-center gap-2 p-2 bg-gray-800/50 rounded">
-                                    <span className={getFileTypeColor(fileType.key)}>
-                                      {getFileIcon(fileType.key)}
-                                    </span>
-                                    <span className="text-sm text-gray-300 truncate flex-1">
-                                      {file.name}
-                                    </span>
-                                    <span className="text-xs text-gray-500">
-                                      {(file.size / 1024 / 1024).toFixed(1)} MB
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        {fileTypes.map(fileType => (
+                          <div key={fileType.key} className="space-y-3">
+                            <Label className="text-white flex items-center gap-2 text-sm font-medium">
+                              <span className="text-lg">{getFileIcon(fileType.key)}</span>
+                              {fileType.label} *
+                            </Label>
+                            
+                            <div className="border-2 border-dashed border-gray-600 rounded-lg p-4 hover:border-gray-500 transition-colors bg-gray-800/30">
+                              <input
+                                type="file"
+                                multiple
+                                accept={fileType.key === 'photo' ? 'image/*' : 
+                                       fileType.key === 'video' ? 'video/*' :
+                                       fileType.key === 'audio' ? 'audio/*' :
+                                       fileType.key === 'portfolio' ? '.pdf,.doc,.docx,.txt' :
+                                       '.pdf,.doc,.docx,.txt'}
+                                onChange={(e) => handleFileChange(fileType.key, Array.from(e.target.files))}
+                                className="hidden"
+                                id={`file-${fileType.key}`}
+                              />
+                              <label
+                                htmlFor={`file-${fileType.key}`}
+                                className="cursor-pointer flex flex-col items-center justify-center py-4"
+                              >
+                                <div className={`text-3xl mb-2 ${getFileTypeColor(fileType.key)}`}>
+                                  {getFileIcon(fileType.key)}
+                                </div>
+                                <p className="text-gray-300 text-sm text-center mb-1">
+                                  Cliquez pour sélectionner des {fileType.label.toLowerCase()}
+                                </p>
+                                <p className="text-gray-500 text-xs text-center">
+                                  {fileType.key === 'photo' ? 'JPG, PNG, GIF' :
+                                   fileType.key === 'video' ? 'MP4, AVI, MOV' :
+                                   fileType.key === 'audio' ? 'MP3, WAV, M4A' :
+                                   fileType.key === 'portfolio' ? 'PDF, DOC, DOCX, TXT' :
+                                   'PDF, DOC, DOCX, TXT'}
+                                </p>
+                              </label>
                             </div>
-                          )}
-                        </div>
-                      ))}
+                            
+                            {/* Affichage des fichiers sélectionnés */}
+                            {candidatureData.files[fileType.key] && candidatureData.files[fileType.key].length > 0 && (
+                              <div className="space-y-2">
+                                <p className="text-sm text-gray-400 font-medium">
+                                  {candidatureData.files[fileType.key].length} fichier(s) sélectionné(s)
+                                </p>
+                                <div className="space-y-2 max-h-32 overflow-y-auto">
+                                  {candidatureData.files[fileType.key].map((file, index) => (
+                                    <div key={index} className="flex items-center gap-3 p-2 bg-gray-800/50 rounded-lg">
+                                      <span className={`text-lg ${getFileTypeColor(fileType.key)}`}>
+                                        {getFileIcon(fileType.key)}
+                                      </span>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-sm text-gray-300 truncate font-medium">
+                                          {file.name}
+                                        </p>
+                                        <p className="text-xs text-gray-500">
+                                          {(file.size / 1024 / 1024).toFixed(1)} MB
+                                        </p>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   );
                 })()}

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Helmet } from 'react-helmet';
+import { HelmetProvider } from 'react-helmet-async';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { Toaster } from '@/components/ui/toaster';
@@ -62,12 +62,7 @@ function App() {
   };
 
   return (
-    <>
-      <Helmet>
-        <title>Makona Awards 2025 - Célébrer l'Excellence</title>
-        <meta name="description" content="Makona Awards 2025 - La 4ème édition de la cérémonie qui célèbre l'excellence et le talent dans la région de la Makona Union (Guinée, Libéria, Sierra Leone). Votez pour vos candidats préférés !" />
-      </Helmet>
-      
+    <HelmetProvider>
       <div className="min-h-screen flex flex-col bg-makona-pattern">
         <Header 
           isAuthenticated={isAuthenticated} 
@@ -128,7 +123,7 @@ function App() {
         <Footer onNavigate={handleNavigation} />
         <Toaster />
       </div>
-    </>
+    </HelmetProvider>
   );
 }
 
