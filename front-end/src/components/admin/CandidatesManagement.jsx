@@ -19,6 +19,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { toast } from '@/components/ui/use-toast';
 import adminService from '@/services/adminService';
+import categoryService from '@/services/categoryService';
 import CandidaturesManagement from './CandidaturesManagement';
 
 const CandidatesManagement = () => {
@@ -36,6 +37,19 @@ const CandidatesManagement = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showCandidatureModal, setShowCandidatureModal] = useState(false);
+  const [candidatureData, setCandidatureData] = useState({
+    category: '',
+    description: '',
+    files: {
+      photo: [],
+      video: [],
+      audio: [],
+      portfolio: [],
+      documents: []
+    }
+  });
+  const [categories, setCategories] = useState([]);
   const [formData, setFormData] = useState({
     email: '',
     username: '',
@@ -246,6 +260,137 @@ const CandidatesManagement = () => {
     setShowDetailModal(true);
   };
 
+  // Fonctions pour les candidatures
+  const loadCategories = async () => {
+    try {
+      const response = await categoryService.getCategories();
+      setCategories(response.results || response);
+    } catch (error) {
+      console.error('Erreur lors du chargement des catégories:', error);
+    }
+  };
+
+  const resetCandidatureForm = () => {
+    setCandidatureData({
+      category: '',
+      description: '',
+      files: {
+        photo: [],
+        video: [],
+        audio: [],
+        portfolio: [],
+        documents: []
+      }
+    });
+  };
+
+  const handleCreateCandidature = async () => {
+    if (!candidatureData.category) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez sélectionner une catégorie",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const candidatureDataToSend = {
+        candidate: selectedCandidate.id,
+        category: candidatureData.category,
+        description: candidatureData.description
+      };
+
+      // Créer la candidature
+      const candidature = await adminService.createCandidature(candidatureDataToSend);
+
+      // Ajouter les fichiers si il y en a
+      const selectedCategory = categories.find(cat => cat.id.toString() === candidatureData.category);
+      if (selectedCategory) {
+        const fileTypes = ['photo', 'video', 'audio', 'portfolio', 'documents'];
+        
+        for (const fileType of fileTypes) {
+          const files = candidatureData.files[fileType];
+          if (files && files.length > 0) {
+            for (const file of files) {
+              const formData = new FormData();
+              formData.append('file', file);
+              formData.append('file_type', fileType);
+              
+              await adminService.addCandidatureFile(candidature.id, formData);
+            }
+          }
+        }
+      }
+
+      toast({
+        title: "Succès",
+        description: "Candidature créée avec succès"
+      });
+
+      setShowCandidatureModal(false);
+      resetCandidatureForm();
+      loadCandidates(); // Recharger pour mettre à jour les statistiques
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de créer la candidature",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleCategoryChange = (categoryId) => {
+    setCandidatureData(prev => ({ 
+      ...prev, 
+      category: categoryId,
+      files: {
+        photo: [],
+        video: [],
+        audio: [],
+        portfolio: [],
+        documents: []
+      }
+    }));
+  };
+
+  const handleFileChange = (fileType, files) => {
+    setCandidatureData(prev => ({
+      ...prev,
+      files: {
+        ...prev.files,
+        [fileType]: files
+      }
+    }));
+  };
+
+  const getFileIcon = (fileType) => {
+    const icons = {
+      photo: '📷',
+      video: '🎥',
+      audio: '🎵',
+      portfolio: '📁',
+      documents: '📄'
+    };
+    return icons[fileType] || '📄';
+  };
+
+  const getFileTypeColor = (fileType) => {
+    const colors = {
+      photo: 'text-blue-400',
+      video: 'text-red-400',
+      audio: 'text-purple-400',
+      portfolio: 'text-green-400',
+      documents: 'text-orange-400'
+    };
+    return colors[fileType] || 'text-gray-400';
+  };
+
+  const openCandidatureModal = () => {
+    setShowCandidatureModal(true);
+    loadCategories();
+  };
+
   const getStatusBadge = (candidate) => {
     if (!candidate.is_active) {
       return <Badge variant="destructive">Inactif</Badge>;
@@ -270,62 +415,70 @@ const CandidatesManagement = () => {
     >
       {/* En-tête avec sous-onglets */}
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-3xl font-bold text-white mb-2">Gestion des Candidats</h2>
-            <p className="text-gray-400">Gérez les candidats et validez leurs candidatures</p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">Gestion des Candidats</h2>
+            <p className="text-gray-400 text-sm sm:text-base">Gérez les candidats et validez leurs candidatures</p>
           </div>
-          <div className="flex gap-2">
+          
+          {/* Boutons responsive */}
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <Button
               onClick={() => adminService.exportUsersCSV({ user_type: 'candidate', ...filters })}
               variant="outline"
-              className="btn-secondary"
+              size="sm"
+              className="btn-secondary text-xs sm:text-sm"
             >
-              <Download className="w-4 h-4 mr-2" />
-              Exporter CSV
+              <Download className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              <span className="hidden xs:inline">Exporter CSV</span>
+              <span className="xs:hidden">CSV</span>
             </Button>
             <Button
               onClick={loadCandidates}
               variant="outline"
-              className="btn-secondary"
+              size="sm"
+              className="btn-secondary text-xs sm:text-sm"
             >
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Actualiser
+              <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              <span className="hidden xs:inline">Actualiser</span>
+              <span className="xs:hidden">↻</span>
             </Button>
             {activeSubTab === 'list' && (
               <Button
                 onClick={() => setShowCreateModal(true)}
-                className="btn-primary"
+                size="sm"
+                className="btn-primary text-xs sm:text-sm"
               >
-                <UserPlus className="w-4 h-4 mr-2" />
-                Nouveau Candidat
+                <UserPlus className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                <span className="hidden xs:inline">Nouveau Candidat</span>
+                <span className="xs:hidden">Nouveau</span>
               </Button>
             )}
           </div>
         </div>
 
-        {/* Sous-onglets */}
-        <div className="flex space-x-1 bg-gray-800/50 p-1 rounded-lg">
+        {/* Sous-onglets responsive */}
+        <div className="flex flex-col sm:flex-row space-y-1 sm:space-y-0 sm:space-x-1 bg-gray-800/50 p-1 rounded-lg">
           <button
             onClick={() => setActiveSubTab('list')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all duration-200 ${
+            className={`flex items-center justify-center sm:justify-start gap-2 px-3 sm:px-4 py-2 rounded-md transition-all duration-200 text-sm ${
               activeSubTab === 'list'
                 ? 'bg-blue-600 text-white shadow-lg'
                 : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
             }`}
           >
-            <Users className="w-4 h-4" />
+            <Users className="w-4 h-4 flex-shrink-0" />
             <span className="font-medium">Liste des Candidats</span>
           </button>
           <button
             onClick={() => setActiveSubTab('validation')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all duration-200 ${
+            className={`flex items-center justify-center sm:justify-start gap-2 px-3 sm:px-4 py-2 rounded-md transition-all duration-200 text-sm ${
               activeSubTab === 'validation'
                 ? 'bg-blue-600 text-white shadow-lg'
                 : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
             }`}
           >
-            <CheckSquare className="w-4 h-4" />
+            <CheckSquare className="w-4 h-4 flex-shrink-0" />
             <span className="font-medium">Validation Candidatures</span>
           </button>
         </div>
@@ -342,7 +495,7 @@ const CandidatesManagement = () => {
             transition={{ duration: 0.2 }}
           >
             {/* Filtres */}
-            <div className="card-glass p-6">
+            <div className="bg-gray-900/95 backdrop-blur-lg border border-gray-700/50 rounded-2xl p-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -379,7 +532,7 @@ const CandidatesManagement = () => {
             </div>
 
       {/* Tableau des candidats */}
-      <div className="card-glass overflow-hidden">
+      <div className="bg-gray-900/95 backdrop-blur-lg border border-gray-700/50 rounded-2xl overflow-hidden">
         {loading ? (
           <div className="text-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-400 mx-auto mb-4"></div>
@@ -545,7 +698,7 @@ const CandidatesManagement = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
             onClick={() => {
               setShowCreateModal(false);
               setShowEditModal(false);
@@ -556,7 +709,7 @@ const CandidatesManagement = () => {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="card-glass p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+              className="bg-gray-900/95 backdrop-blur-lg border border-gray-700/50 rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-6">
@@ -788,7 +941,7 @@ const CandidatesManagement = () => {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="card-glass p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+              className="bg-gray-900/95 backdrop-blur-lg border border-gray-700/50 rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-6">
@@ -926,6 +1079,13 @@ const CandidatesManagement = () => {
                     Fermer
                   </Button>
                   <Button
+                    onClick={openCandidatureModal}
+                    className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Nouvelle candidature
+                  </Button>
+                  <Button
                     onClick={() => {
                       setShowDetailModal(false);
                       openEditModal(selectedCandidate);
@@ -936,6 +1096,211 @@ const CandidatesManagement = () => {
                     Modifier
                   </Button>
                 </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de création de candidature */}
+      <AnimatePresence>
+        {showCandidatureModal && selectedCandidate && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={() => {
+              setShowCandidatureModal(false);
+              resetCandidatureForm();
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-gray-900/95 backdrop-blur-lg border border-gray-700/50 rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-white">Nouvelle candidature</h3>
+                <Button
+                  onClick={() => {
+                    setShowCandidatureModal(false);
+                    resetCandidatureForm();
+                  }}
+                  variant="ghost"
+                  size="icon"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+
+              <div className="space-y-6">
+                {/* Informations du candidat */}
+                <div className="bg-gray-800/50 rounded-xl p-4">
+                  <h4 className="text-lg font-semibold text-white mb-2">Candidat</h4>
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
+                      <span className="text-sm font-bold text-white">
+                        {selectedCandidate.first_name?.[0]}{selectedCandidate.last_name?.[0]}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-white">{selectedCandidate.full_name}</p>
+                      <p className="text-sm text-gray-400">@{selectedCandidate.username}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Formulaire de candidature */}
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="category" className="text-white">Catégorie *</Label>
+                    <Select 
+                      value={candidatureData.category} 
+                      onValueChange={handleCategoryChange}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionner une catégorie" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map(category => (
+                          <SelectItem key={category.id} value={category.id.toString()}>
+                            <div className="flex items-center gap-2">
+                              <span>{category.name}</span>
+                              {category.category_class && (
+                                <Badge variant="outline" className="text-xs">
+                                  {category.category_class.name}
+                                </Badge>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="description" className="text-white">Description</Label>
+                    <Textarea
+                      id="description"
+                      value={candidatureData.description}
+                      onChange={(e) => setCandidatureData(prev => ({ ...prev, description: e.target.value }))}
+                      placeholder="Décrivez votre candidature..."
+                      rows={4}
+                    />
+                  </div>
+                </div>
+
+                {/* Champs de fichiers selon la catégorie sélectionnée */}
+                {candidatureData.category && (() => {
+                  const selectedCategory = categories.find(cat => cat.id.toString() === candidatureData.category);
+                  if (!selectedCategory) return null;
+
+                  const fileTypes = [
+                    { key: 'photo', label: 'Photos', required: selectedCategory.requires_photo },
+                    { key: 'video', label: 'Vidéos', required: selectedCategory.requires_video },
+                    { key: 'audio', label: 'Audio', required: selectedCategory.requires_audio },
+                    { key: 'portfolio', label: 'Portfolio', required: selectedCategory.requires_portfolio },
+                    { key: 'documents', label: 'Documents', required: selectedCategory.requires_documents }
+                  ].filter(fileType => fileType.required);
+
+                  if (fileTypes.length === 0) return null;
+
+                  return (
+                    <div className="space-y-4">
+                      <h4 className="text-lg font-semibold text-white border-b border-gray-700 pb-2">
+                        Fichiers requis
+                      </h4>
+                      
+                      {fileTypes.map(fileType => (
+                        <div key={fileType.key} className="space-y-2">
+                          <Label className="text-white flex items-center gap-2">
+                            <span className="text-lg">{getFileIcon(fileType.key)}</span>
+                            {fileType.label} *
+                          </Label>
+                          
+                          <div className="border-2 border-dashed border-gray-600 rounded-lg p-4 hover:border-gray-500 transition-colors">
+                            <input
+                              type="file"
+                              multiple
+                              accept={fileType.key === 'photo' ? 'image/*' : 
+                                     fileType.key === 'video' ? 'video/*' :
+                                     fileType.key === 'audio' ? 'audio/*' :
+                                     fileType.key === 'portfolio' ? '.pdf,.doc,.docx,.txt' :
+                                     '.pdf,.doc,.docx,.txt'}
+                              onChange={(e) => handleFileChange(fileType.key, Array.from(e.target.files))}
+                              className="hidden"
+                              id={`file-${fileType.key}`}
+                            />
+                            <label
+                              htmlFor={`file-${fileType.key}`}
+                              className="cursor-pointer flex flex-col items-center justify-center py-4"
+                            >
+                              <div className={`text-4xl mb-2 ${getFileTypeColor(fileType.key)}`}>
+                                {getFileIcon(fileType.key)}
+                              </div>
+                              <p className="text-gray-300 text-sm">
+                                Cliquez pour sélectionner des {fileType.label.toLowerCase()}
+                              </p>
+                              <p className="text-gray-500 text-xs mt-1">
+                                {fileType.key === 'photo' ? 'JPG, PNG, GIF' :
+                                 fileType.key === 'video' ? 'MP4, AVI, MOV' :
+                                 fileType.key === 'audio' ? 'MP3, WAV, M4A' :
+                                 fileType.key === 'portfolio' ? 'PDF, DOC, DOCX, TXT' :
+                                 'PDF, DOC, DOCX, TXT'}
+                              </p>
+                            </label>
+                          </div>
+                          
+                          {/* Affichage des fichiers sélectionnés */}
+                          {candidatureData.files[fileType.key] && candidatureData.files[fileType.key].length > 0 && (
+                            <div className="space-y-2">
+                              <p className="text-sm text-gray-400">
+                                {candidatureData.files[fileType.key].length} fichier(s) sélectionné(s)
+                              </p>
+                              <div className="space-y-1">
+                                {candidatureData.files[fileType.key].map((file, index) => (
+                                  <div key={index} className="flex items-center gap-2 p-2 bg-gray-800/50 rounded">
+                                    <span className={getFileTypeColor(fileType.key)}>
+                                      {getFileIcon(fileType.key)}
+                                    </span>
+                                    <span className="text-sm text-gray-300 truncate flex-1">
+                                      {file.name}
+                                    </span>
+                                    <span className="text-xs text-gray-500">
+                                      {(file.size / 1024 / 1024).toFixed(1)} MB
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+                <Button
+                  onClick={() => {
+                    setShowCandidatureModal(false);
+                    resetCandidatureForm();
+                  }}
+                  variant="outline"
+                >
+                  Annuler
+                </Button>
+                <Button 
+                  onClick={handleCreateCandidature}
+                  className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Créer la candidature
+                </Button>
               </div>
             </motion.div>
           </motion.div>

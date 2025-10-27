@@ -193,42 +193,48 @@ const CandidaturesManagement = () => {
       animate={{ opacity: 1, y: 0 }}
       className="space-y-6"
     >
-      {/* En-tête */}
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <h2 className="text-3xl font-bold text-white">Validation des Candidatures</h2>
+      {/* En-tête responsive */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
+            <h2 className="text-2xl sm:text-3xl font-bold text-white">Validation des Candidatures</h2>
             {candidatures.length > 0 && (
-              <Badge className="bg-yellow-500 text-white">
+              <Badge className="bg-yellow-500 text-white text-xs sm:text-sm self-start sm:self-center">
                 {candidatures.length} en attente
               </Badge>
             )}
           </div>
-          <p className="text-gray-400">Candidatures en attente de validation</p>
+          <p className="text-gray-400 text-sm sm:text-base">Candidatures en attente de validation</p>
         </div>
-        <div className="flex gap-2">
+        
+        {/* Boutons responsive */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <Button
             onClick={() => adminService.exportCandidaturesCSV(filters)}
             variant="outline"
-            className="btn-secondary"
+            size="sm"
+            className="btn-secondary text-xs sm:text-sm"
           >
-            <Download className="w-4 h-4 mr-2" />
-            Exporter CSV
+            <Download className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+            <span className="hidden xs:inline">Exporter CSV</span>
+            <span className="xs:hidden">CSV</span>
           </Button>
           <Button
             onClick={loadCandidatures}
             variant="outline"
-            className="btn-secondary"
+            size="sm"
+            className="btn-secondary text-xs sm:text-sm"
           >
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Actualiser
+            <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+            <span className="hidden xs:inline">Actualiser</span>
+            <span className="xs:hidden">↻</span>
           </Button>
         </div>
       </div>
 
-      {/* Filtres */}
-      <div className="card-glass p-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Filtres responsive */}
+      <div className="bg-gradient-to-br from-gray-800/60 to-gray-900/60 backdrop-blur-sm border border-gray-700/50 rounded-xl p-4 sm:p-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <Input

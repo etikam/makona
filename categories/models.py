@@ -7,6 +7,61 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator
 
 
+class CategoryClass(models.Model):
+    """
+    Classe de catégories pour grouper les catégories par domaine
+    Exemples: Social, Culture, Innovation, Sport, etc.
+    """
+    name = models.CharField(
+        max_length=100,
+        unique=True,
+        verbose_name="Nom de la classe"
+    )
+    slug = models.SlugField(
+        max_length=100,
+        unique=True,
+        verbose_name="Slug"
+    )
+    description = models.CharField(
+        max_length=200,
+        blank=True,
+        verbose_name="Description"
+    )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name="Active"
+    )
+    order = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Ordre d'affichage"
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Date de création"
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name="Date de modification"
+    )
+
+    class Meta:
+        verbose_name = "Classe de catégorie"
+        verbose_name_plural = "Classes de catégories"
+        ordering = ['order', 'name']
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
+    def get_categories_count(self):
+        """Retourne le nombre de catégories dans cette classe"""
+        return self.categories.filter(is_active=True).count()
+
+
 def validate_photo_extensions(value):
     """Valide les extensions de fichiers pour les photos"""
     allowed_extensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff']
@@ -89,6 +144,15 @@ class Category(models.Model):
     """
     Modèle pour les catégories des Makona Awards
     """
+    category_class = models.ForeignKey(
+        CategoryClass,
+        on_delete=models.CASCADE,
+        related_name='categories',
+        verbose_name="Classe de catégorie",
+        help_text="Classe à laquelle appartient cette catégorie",
+        null=True,
+        blank=True
+    )
     name = models.CharField(
         max_length=100,
         unique=True,
@@ -99,19 +163,9 @@ class Category(models.Model):
         unique=True,
         verbose_name="Slug"
     )
-    icon = models.CharField(
-        max_length=50,
-        verbose_name="Icône Lucide",
-        help_text="Nom de l'icône Lucide (ex: Music, Dance, etc.)"
-    )
     description = models.TextField(
         max_length=500,
         verbose_name="Description"
-    )
-    color_gradient = models.CharField(
-        max_length=50,
-        verbose_name="Dégradé de couleur",
-        help_text="Classes Tailwind CSS (ex: from-purple-500 to-pink-500)"
     )
     is_active = models.BooleanField(
         default=True,

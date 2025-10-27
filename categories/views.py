@@ -6,10 +6,11 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 
-from .models import Category
+from .models import Category, CategoryClass
 from .serializers import (
     CategorySerializer, CategoryListSerializer, 
-    CategoryDetailSerializer, CategoryCreateUpdateSerializer
+    CategoryDetailSerializer, CategoryCreateUpdateSerializer,
+    CategoryClassSerializer, CategoryClassDetailSerializer, CategoryClassCreateUpdateSerializer
 )
 from accounts.permissions import IsAdminUser, IsPublicOrAuthenticated
 
@@ -106,4 +107,78 @@ def toggle_category_status_view(request, slug):
     return Response({
         'message': f'Catégorie {status_text} avec succès',
         'is_active': category.is_active
+    }, status=status.HTTP_200_OK)
+
+
+# ===== VUES POUR LES CLASSES DE CATÉGORIES =====
+
+class CategoryClassListView(generics.ListAPIView):
+    """
+    Vue pour lister toutes les classes de catégories actives
+    """
+    queryset = CategoryClass.objects.filter(is_active=True)
+    serializer_class = CategoryClassSerializer
+    permission_classes = [permissions.AllowAny]
+    pagination_class = None
+
+
+class CategoryClassDetailView(generics.RetrieveAPIView):
+    """
+    Vue pour récupérer les détails d'une classe de catégorie avec ses catégories
+    """
+    queryset = CategoryClass.objects.filter(is_active=True)
+    serializer_class = CategoryClassDetailSerializer
+    permission_classes = [permissions.AllowAny]
+    lookup_field = 'slug'
+
+
+class CategoryClassAdminListView(generics.ListCreateAPIView):
+    """
+    Vue admin pour lister et créer les classes de catégories
+    """
+    queryset = CategoryClass.objects.all()
+    permission_classes = [permissions.AllowAny]
+    
+    def get_serializer_class(self):
+        if self.request.method == 'GET':
+            return CategoryClassSerializer
+        return CategoryClassCreateUpdateSerializer
+
+
+class CategoryClassAdminDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    Vue admin pour récupérer, modifier et supprimer une classe de catégorie
+    """
+    queryset = CategoryClass.objects.all()
+    serializer_class = CategoryClassCreateUpdateSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    lookup_field = 'id'
+    
+    def get_permissions(self):
+        if not self.request.user.is_authenticated or not self.request.user.is_admin():
+            return [permissions.IsAdminUser()]
+        return super().get_permissions()
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def toggle_category_class_status_view(request, slug):
+    """
+    Vue pour activer/désactiver une classe de catégorie
+    """
+    if not request.user.is_admin():
+        return Response(
+            {'message': 'Accès non autorisé'}, 
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    category_class = get_object_or_404(CategoryClass, slug=slug)
+    category_class.is_active = not category_class.is_active
+    category_class.save()
+    
+    status_text = "activée" if category_class.is_active else "désactivée"
+    
+    return Response({
+        'message': f'Classe de catégorie {status_text} avec succès',
+        'is_active': category_class.is_active
     }, status=status.HTTP_200_OK)

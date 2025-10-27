@@ -99,3 +99,4 @@ export {
 	ToastTitle,
 	ToastViewport,
 };
+export default Toast;

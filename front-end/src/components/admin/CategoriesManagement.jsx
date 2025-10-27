@@ -1,7 +1,7 @@
 /**
  * Composant de gestion des catégories avec types de médias (Admin) - Design moderne
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Tag, Plus, Edit, Trash2, Save, X, Eye, EyeOff,
@@ -18,15 +18,20 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/components/ui/use-toast';
+import { ScrollableStatsGrid } from '@/components/ui';
 import categoryService from '@/services/categoryService';
+import categoryClassService from '@/services/categoryClassService';
 import apiService from '@/services/api';
 
 const CategoriesManagement = () => {
   const [categories, setCategories] = useState([]);
   const [filteredCategories, setFilteredCategories] = useState([]);
+  const [categoryClasses, setCategoryClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState(null);
   const [editingCategory, setEditingCategory] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('grid'); // 'grid' ou 'list'
@@ -37,10 +42,9 @@ const CategoriesManagement = () => {
     withMedia: 0
   });
   const [formData, setFormData] = useState({
+    category_class: '',
     name: '',
     description: '',
-    icon: '',
-    color_gradient: '',
     is_active: true,
     requires_photo: true,
     requires_video: false,
@@ -53,6 +57,7 @@ const CategoriesManagement = () => {
 
   useEffect(() => {
     loadCategories();
+    loadCategoryClasses();
   }, []);
 
   const loadCategories = async () => {
@@ -60,7 +65,6 @@ const CategoriesManagement = () => {
     try {
       // Utiliser l'endpoint admin pour avoir toutes les données
       const response = await apiService.get('/categories/admin/');
-      console.log('Categories loaded:', response);
       
       // Gérer la réponse selon le format (array ou objet avec pagination)
       const categoriesData = Array.isArray(response) ? response : response.results || response;
@@ -92,6 +96,16 @@ const CategoriesManagement = () => {
     }
   };
 
+  const loadCategoryClasses = async () => {
+    try {
+      const response = await categoryClassService.getAdminCategoryClasses();
+      const classesData = Array.isArray(response) ? response : response.results || response;
+      setCategoryClasses(classesData);
+    } catch (error) {
+      console.error('Erreur lors du chargement des classes:', error);
+    }
+  };
+
   // Fonction pour calculer les statistiques
   const calculateStats = (categoriesData) => {
     const total = categoriesData.length;
@@ -106,7 +120,7 @@ const CategoriesManagement = () => {
   };
 
   // Fonction de recherche
-  const handleSearch = (term) => {
+  const handleSearch = useCallback((term) => {
     setSearchTerm(term);
     if (!term.trim()) {
       setFilteredCategories(categories);
@@ -118,12 +132,12 @@ const CategoriesManagement = () => {
       category.description.toLowerCase().includes(term.toLowerCase())
     );
     setFilteredCategories(filtered);
-  };
+  }, [categories]);
 
   // Effet pour la recherche
   useEffect(() => {
     handleSearch(searchTerm);
-  }, [searchTerm, categories]);
+  }, [searchTerm, handleSearch]);
 
   const handleCreateCategory = async () => {
     try {
@@ -187,10 +201,9 @@ const CategoriesManagement = () => {
 
   const resetForm = () => {
     setFormData({
+      category_class: '',
       name: '',
       description: '',
-      icon: '',
-      color_gradient: '',
       is_active: true,
       requires_photo: true,
       requires_video: false,
@@ -205,10 +218,9 @@ const CategoriesManagement = () => {
   const openEditModal = (category) => {
     setEditingCategory(category);
     setFormData({
+      category_class: category.category_class || '',
       name: category.name,
       description: category.description,
-      icon: category.icon,
-      color_gradient: category.color_gradient,
       is_active: category.is_active,
       requires_photo: category.requires_photo,
       requires_video: category.requires_video,
@@ -254,18 +266,19 @@ const CategoriesManagement = () => {
     return types;
   };
 
-  const predefinedGradients = [
-    'from-blue-500 to-purple-600',
-    'from-green-500 to-teal-600',
-    'from-red-500 to-pink-600',
-    'from-purple-500 to-indigo-600',
-    'from-pink-500 to-rose-600',
-    'from-orange-500 to-red-600'
-  ];
+  // Fonction pour tronquer le texte
+  const truncateText = (text, maxLength = 150) => {
+    if (!text) return '';
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
+  };
 
-  const predefinedIcons = [
-    '🎵', '💃', '🎬', '📸', '📚', '🎨', '🎭', '👗', '👨‍🍳', '🏃‍♂️', '💻', '🎓'
-  ];
+  // Fonction pour ouvrir la modal de détails
+  const openDetailModal = (category) => {
+    setSelectedCategory(category);
+    setShowDetailModal(true);
+  };
+
 
   if (loading) {
     return (
@@ -283,115 +296,93 @@ const CategoriesManagement = () => {
     >
       {/* Header moderne */}
       <div className="bg-gradient-to-r from-gray-800/50 to-gray-900/50 rounded-2xl p-8 border border-gray-700">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Gestion des Catégories</h1>
-            <p className="text-gray-400">Configurez les catégories et leurs types de médias requis</p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Gestion des Catégories</h1>
+            <p className="text-gray-400 text-sm sm:text-base">Configurez les catégories et leurs types de médias requis</p>
           </div>
           <Button
             onClick={() => setShowCreateModal(true)}
-            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-6 py-3 text-lg font-medium"
+            size="sm"
+            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-xs sm:text-sm font-medium"
           >
-            <Plus className="w-5 h-5 mr-2" />
-            Nouvelle catégorie
+            <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+            <span className="hidden xs:inline">Nouvelle catégorie</span>
+            <span className="xs:hidden">Nouvelle</span>
           </Button>
         </div>
 
-        {/* Barre de recherche et contrôles */}
-        <div className="flex items-center gap-4">
+        {/* Barre de recherche et contrôles responsive */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
           <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
             <Input
               placeholder="Rechercher une catégorie..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 h-12"
+              className="pl-9 sm:pl-10 bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 h-10 sm:h-12 text-sm sm:text-base"
             />
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 justify-center sm:justify-end">
             <Button
               variant={viewMode === 'grid' ? 'default' : 'outline'}
-              size="icon"
+              size="sm"
               onClick={() => setViewMode('grid')}
-              className="h-12 w-12"
+              className="h-10 w-10 sm:h-12 sm:w-12"
             >
-              <Grid3X3 className="w-5 h-5" />
+              <Grid3X3 className="w-4 h-4 sm:w-5 sm:h-5" />
             </Button>
             <Button
               variant={viewMode === 'list' ? 'default' : 'outline'}
-              size="icon"
+              size="sm"
               onClick={() => setViewMode('list')}
-              className="h-12 w-12"
+              className="h-10 w-10 sm:h-12 sm:w-12"
             >
-              <List className="w-5 h-5" />
+              <List className="w-4 h-4 sm:w-5 sm:h-5" />
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Grille de statistiques */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-xl p-6 border border-blue-500/30"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-blue-400 text-sm font-medium">Total</p>
-              <p className="text-2xl font-bold text-white">{stats.total}</p>
-            </div>
-            <BarChart3 className="w-8 h-8 text-blue-400" />
-          </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-xl p-6 border border-green-500/30"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-green-400 text-sm font-medium">Actives</p>
-              <p className="text-2xl font-bold text-white">{stats.active}</p>
-            </div>
-            <CheckCircle className="w-8 h-8 text-green-400" />
-          </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="bg-gradient-to-br from-orange-500/20 to-orange-600/20 rounded-xl p-6 border border-orange-500/30"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-orange-400 text-sm font-medium">Inactives</p>
-              <p className="text-2xl font-bold text-white">{stats.inactive}</p>
-            </div>
-            <Clock className="w-8 h-8 text-orange-400" />
-          </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="bg-gradient-to-br from-purple-500/20 to-purple-600/20 rounded-xl p-6 border border-purple-500/30"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-purple-400 text-sm font-medium">Avec Médias</p>
-              <p className="text-2xl font-bold text-white">{stats.withMedia}</p>
-            </div>
-            <Star className="w-8 h-8 text-purple-400" />
-          </div>
-        </motion.div>
-      </div>
+      {/* Grille de statistiques scrollable */}
+      <ScrollableStatsGrid
+        stats={[
+          {
+            key: 'total',
+            label: 'Total',
+            value: stats.total,
+            icon: BarChart3,
+            iconColor: 'text-blue-400',
+            className: 'bg-gradient-to-br from-blue-500/20 to-blue-600/20 border-blue-500/30'
+          },
+          {
+            key: 'active',
+            label: 'Actives',
+            value: stats.active,
+            icon: CheckCircle,
+            iconColor: 'text-green-400',
+            className: 'bg-gradient-to-br from-green-500/20 to-green-600/20 border-green-500/30'
+          },
+          {
+            key: 'inactive',
+            label: 'Inactives',
+            value: stats.inactive,
+            icon: Clock,
+            iconColor: 'text-orange-400',
+            className: 'bg-gradient-to-br from-orange-500/20 to-orange-600/20 border-orange-500/30'
+          },
+          {
+            key: 'with-media',
+            label: 'Avec Médias',
+            value: stats.withMedia,
+            icon: Star,
+            iconColor: 'text-purple-400',
+            className: 'bg-gradient-to-br from-purple-500/20 to-purple-600/20 border-purple-500/30'
+          }
+        ]}
+        className="mb-6"
+      />
 
       {/* Liste des catégories - Vue moderne */}
       {viewMode === 'grid' ? (
@@ -407,12 +398,17 @@ const CategoriesManagement = () => {
               {/* Header moderne */}
               <div className="flex items-start justify-between mb-6">
                 <div className="flex items-center gap-4">
-                  <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${category.color_gradient} flex items-center justify-center text-2xl shadow-lg`}>
-                    {category.icon}
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-2xl shadow-lg">
+                    <Tag className="w-8 h-8 text-white" />
                   </div>
                   <div>
                     <h3 className="text-xl font-bold text-white mb-2">{category.name}</h3>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {category.category_class && (
+                        <Badge className="bg-blue-500/20 text-blue-300 border-blue-400/30">
+                          {categoryClasses.find(cls => cls.id === category.category_class)?.name || 'Classe inconnue'}
+                        </Badge>
+                      )}
                       <Badge 
                         variant={category.is_active ? "default" : "secondary"}
                         className={category.is_active ? "bg-green-500/20 text-green-400 border-green-500/30" : "bg-gray-500/20 text-gray-400 border-gray-500/30"}
@@ -424,6 +420,14 @@ const CategoriesManagement = () => {
                 </div>
                 
                 <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => openDetailModal(category)}
+                    className="h-10 w-10 text-gray-400 hover:text-green-400 hover:bg-green-500/10 rounded-xl"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </Button>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -444,8 +448,8 @@ const CategoriesManagement = () => {
               </div>
 
               {/* Description */}
-              <p className="text-gray-300 text-sm mb-6 leading-relaxed">
-                {category.description}
+              <p className="text-gray-300 text-sm mb-4 leading-relaxed">
+                {truncateText(category.description, 80)}
               </p>
 
               {/* Types de médias requis - Design moderne */}
@@ -522,12 +526,12 @@ const CategoriesManagement = () => {
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${category.color_gradient} flex items-center justify-center text-xl`}>
-                    {category.icon}
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-xl">
+                    <Tag className="w-6 h-6 text-white" />
                   </div>
                   <div>
                     <h3 className="text-lg font-bold text-white">{category.name}</h3>
-                    <p className="text-gray-400 text-sm">{category.description}</p>
+                    <p className="text-gray-400 text-sm">{truncateText(category.description, 60)}</p>
                   </div>
                 </div>
                 
@@ -555,6 +559,14 @@ const CategoriesManagement = () => {
                   </Badge>
                   
                   <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => openDetailModal(category)}
+                      className="h-8 w-8 text-gray-400 hover:text-green-400 hover:bg-green-500/10"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -653,22 +665,25 @@ const CategoriesManagement = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="icon" className="text-white font-medium">Icône</Label>
-                      <Select value={formData.icon} onValueChange={(value) => setFormData(prev => ({ ...prev, icon: value }))}>
+                      <Label htmlFor="category_class" className="text-white font-medium">Classe de catégorie *</Label>
+                      <Select 
+                        value={formData.category_class} 
+                        onValueChange={(value) => setFormData(prev => ({ ...prev, category_class: value }))}
+                      >
                         <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
-                          <SelectValue placeholder="Sélectionner une icône" />
+                          <SelectValue placeholder="Sélectionner une classe" />
                         </SelectTrigger>
                         <SelectContent className="bg-gray-800 border-gray-600">
-                          <SelectItem value="none">Aucune icône</SelectItem>
-                          {predefinedIcons.map(icon => (
-                            <SelectItem key={icon} value={icon} className="text-white hover:bg-gray-700">
-                              {icon}
+                          {categoryClasses.map(cls => (
+                            <SelectItem key={cls.id} value={cls.id.toString()} className="text-white hover:bg-gray-700">
+                              {cls.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
+
 
                   <div className="mt-6 space-y-2">
                     <Label htmlFor="description" className="text-white font-medium">Description</Label>
@@ -683,30 +698,6 @@ const CategoriesManagement = () => {
                   </div>
                 </div>
 
-                {/* Section 2: Apparence */}
-                <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-                  <h4 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                    <Palette className="w-5 h-5 text-purple-400" />
-                    Apparence
-                  </h4>
-                  
-                  <div className="space-y-4">
-                    <Label className="text-white font-medium">Dégradé de couleur</Label>
-                    <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
-                      {predefinedGradients.map(gradient => (
-                        <button
-                          key={gradient}
-                          onClick={() => setFormData(prev => ({ ...prev, color_gradient: gradient }))}
-                          className={`w-full h-12 rounded-lg bg-gradient-to-r ${gradient} transition-all duration-200 ${
-                            formData.color_gradient === gradient 
-                              ? 'ring-2 ring-white ring-offset-2 ring-offset-gray-900 scale-105' 
-                              : 'hover:scale-105'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </div>
 
                 {/* Section 3: Types de médias requis - Multi Select Moderne */}
                 <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
@@ -796,6 +787,7 @@ const CategoriesManagement = () => {
                               }));
                             }}
                           >
+                            
                             {/* Checkbox visuel */}
                             <div className="absolute top-3 right-3">
                               <div className={`
@@ -959,6 +951,196 @@ const CategoriesManagement = () => {
                     {showCreateModal ? 'Créer la catégorie' : 'Sauvegarder les modifications'}
                   </Button>
                 </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de détails de la catégorie */}
+      <AnimatePresence>
+        {showDetailModal && selectedCategory && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={() => {
+              setShowDetailModal(false);
+              setSelectedCategory(null);
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-gray-900/95 backdrop-blur-lg border border-gray-700/50 rounded-2xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-2xl font-bold text-white">Détails de la catégorie</h3>
+                <Button
+                  onClick={() => {
+                    setShowDetailModal(false);
+                    setSelectedCategory(null);
+                  }}
+                  variant="ghost"
+                  size="icon"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+
+              <div className="space-y-6">
+                {/* En-tête avec informations principales */}
+                <div className="bg-gradient-to-r from-gray-800/50 to-gray-900/50 rounded-xl p-6 border border-gray-700/50">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+                      <Tag className="w-8 h-8 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-2xl font-bold text-white mb-2">{selectedCategory.name}</h4>
+                      <div className="flex items-center gap-3">
+                        {selectedCategory.category_class && (
+                          <Badge className="bg-blue-500/20 text-blue-300 border-blue-400/30">
+                            {categoryClasses.find(cls => cls.id === selectedCategory.category_class)?.name || 'Classe inconnue'}
+                          </Badge>
+                        )}
+                        <Badge 
+                          variant={selectedCategory.is_active ? "default" : "secondary"}
+                          className={selectedCategory.is_active ? "bg-green-500/20 text-green-400 border-green-500/30" : "bg-gray-500/20 text-gray-400 border-gray-500/30"}
+                        >
+                          {selectedCategory.is_active ? "Active" : "Inactive"}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Description complète */}
+                  <div className="bg-gray-800/30 rounded-lg p-4">
+                    <h5 className="text-lg font-semibold text-white mb-2">Description</h5>
+                    <p className="text-gray-300 leading-relaxed">{selectedCategory.description}</p>
+                  </div>
+                </div>
+
+                {/* Types de médias requis */}
+                <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700/50">
+                  <h5 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                    <Settings className="w-5 h-5 text-blue-400" />
+                    Types de médias requis
+                  </h5>
+                  
+                  {getRequiredFileTypes(selectedCategory).length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {getRequiredFileTypes(selectedCategory).map((type) => {
+                        const Icon = getMediaTypeIcon(type);
+                        return (
+                          <div
+                            key={type}
+                            className={`flex items-center gap-3 p-4 rounded-xl ${getMediaTypeColor(type)} text-white backdrop-blur-sm border`}
+                          >
+                            <Icon className="w-6 h-6" />
+                            <div>
+                              <p className="font-semibold capitalize">{type}</p>
+                              <p className="text-sm opacity-80">
+                                {type === 'photo' ? 'Images (JPG, PNG, GIF)' :
+                                 type === 'video' ? 'Vidéos (MP4, AVI, MOV)' :
+                                 type === 'audio' ? 'Audio (MP3, WAV, M4A)' :
+                                 type === 'portfolio' ? 'Portfolio (PDF, DOC, ZIP)' :
+                                 'Documents (PDF, DOC, TXT)'}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 bg-gray-700/30 rounded-xl border border-gray-600/30">
+                      <span className="text-gray-400 text-lg">Aucun type de média requis</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Durées maximales */}
+                {(selectedCategory.max_video_duration || selectedCategory.max_audio_duration) && (
+                  <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700/50">
+                    <h5 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                      <Clock className="w-5 h-5 text-orange-400" />
+                      Durées maximales
+                    </h5>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {selectedCategory.max_video_duration && (
+                        <div className="flex items-center gap-3 p-4 bg-red-500/10 rounded-xl border border-red-500/20">
+                          <Video className="w-6 h-6 text-red-400" />
+                          <div>
+                            <p className="font-semibold text-red-400">Vidéo</p>
+                            <p className="text-sm text-gray-300">Maximum {selectedCategory.max_video_duration} secondes</p>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {selectedCategory.max_audio_duration && (
+                        <div className="flex items-center gap-3 p-4 bg-purple-500/10 rounded-xl border border-purple-500/20">
+                          <Music className="w-6 h-6 text-purple-400" />
+                          <div>
+                            <p className="font-semibold text-purple-400">Audio</p>
+                            <p className="text-sm text-gray-300">Maximum {selectedCategory.max_audio_duration} secondes</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Métadonnées */}
+                <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700/50">
+                  <h5 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-gray-400" />
+                    Métadonnées
+                  </h5>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-center gap-3 p-3 bg-gray-700/30 rounded-lg">
+                      <Calendar className="w-5 h-5 text-gray-400" />
+                      <div>
+                        <p className="text-sm text-gray-400">Créée le</p>
+                        <p className="text-white">{new Date(selectedCategory.created_at).toLocaleDateString('fr-FR')}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-3 p-3 bg-gray-700/30 rounded-lg">
+                      <Calendar className="w-5 h-5 text-gray-400" />
+                      <div>
+                        <p className="text-sm text-gray-400">Modifiée le</p>
+                        <p className="text-white">{new Date(selectedCategory.updated_at).toLocaleDateString('fr-FR')}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+                <Button
+                  onClick={() => {
+                    setShowDetailModal(false);
+                    setSelectedCategory(null);
+                  }}
+                  variant="outline"
+                >
+                  Fermer
+                </Button>
+                <Button 
+                  onClick={() => {
+                    setShowDetailModal(false);
+                    setSelectedCategory(null);
+                    openEditModal(selectedCategory);
+                  }}
+                  className="btn-primary"
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  Modifier
+                </Button>
               </div>
             </motion.div>
           </motion.div>

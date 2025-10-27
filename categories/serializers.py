@@ -2,7 +2,71 @@
 Serializers pour l'app categories
 """
 from rest_framework import serializers
-from .models import Category
+from .models import Category, CategoryClass
+
+
+class CategoryClassSerializer(serializers.ModelSerializer):
+    """
+    Serializer pour les classes de catégories
+    """
+    categories_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = CategoryClass
+        fields = [
+            'id', 'name', 'slug', 'description',
+            'is_active', 'order', 'categories_count', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'slug', 'created_at', 'updated_at']
+    
+    def get_categories_count(self, obj):
+        return obj.get_categories_count()
+
+
+class CategoryClassDetailSerializer(serializers.ModelSerializer):
+    """
+    Serializer détaillé pour les classes de catégories avec leurs catégories
+    """
+    categories = serializers.SerializerMethodField()
+    categories_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = CategoryClass
+        fields = [
+            'id', 'name', 'slug', 'description',
+            'is_active', 'order', 'categories', 'categories_count', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'slug', 'created_at', 'updated_at']
+    
+    def get_categories(self, obj):
+        from .serializers import CategoryListSerializer
+        categories = obj.categories.filter(is_active=True)
+        return CategoryListSerializer(categories, many=True).data
+    
+    def get_categories_count(self, obj):
+        return obj.get_categories_count()
+
+
+class CategoryClassCreateUpdateSerializer(serializers.ModelSerializer):
+    """
+    Serializer pour créer et modifier les classes de catégories
+    """
+    
+    class Meta:
+        model = CategoryClass
+        fields = [
+            'name', 'description', 'is_active', 'order'
+        ]
+    
+    def validate_name(self, value):
+        # Vérifier l'unicité du nom
+        if self.instance and self.instance.name == value:
+            return value
+        
+        if CategoryClass.objects.filter(name=value).exists():
+            raise serializers.ValidationError("Une classe de catégorie avec ce nom existe déjà.")
+        
+        return value
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -15,7 +79,7 @@ class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
         fields = [
-            'id', 'name', 'slug', 'icon', 'description', 'color_gradient',
+            'id', 'category_class', 'name', 'slug', 'description',
             'is_active', 'requires_photo', 'requires_video', 'requires_portfolio',
             'requires_audio', 'requires_documents', 'max_video_duration', 'max_audio_duration',
             'file_requirements', 'required_file_types', 'created_at', 'updated_at'
@@ -36,8 +100,8 @@ class CategoryListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
         fields = [
-            'id', 'name', 'slug', 'icon', 'description', 
-            'color_gradient', 'is_active', 'requires_photo', 
+            'id', 'category_class', 'name', 'slug', 'description',
+            'is_active', 'requires_photo', 
             'requires_video', 'requires_portfolio', 'requires_audio', 
             'requires_documents', 'max_video_duration', 'max_audio_duration'
         ]
@@ -54,7 +118,7 @@ class CategoryDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
         fields = [
-            'id', 'name', 'slug', 'icon', 'description', 'color_gradient',
+            'id', 'category_class', 'name', 'slug', 'description',
             'is_active', 'requires_photo', 'requires_video', 'requires_portfolio',
             'requires_audio', 'requires_documents', 'max_video_duration', 'max_audio_duration',
             'file_requirements', 'required_file_types', 'candidatures_count', 'created_at', 'updated_at'
@@ -78,7 +142,7 @@ class CategoryCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
         fields = [
-            'name', 'icon', 'description', 'color_gradient', 'is_active',
+            'category_class', 'name', 'description', 'is_active',
             'requires_photo', 'requires_video', 'requires_portfolio',
             'requires_audio', 'requires_documents', 'max_video_duration', 'max_audio_duration'
         ]

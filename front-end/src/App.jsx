@@ -15,6 +15,7 @@ import CandidateDetailPage from '@/pages/CandidateDetailPage';
 import GalleryPage from '@/pages/GalleryPage';
 import CandidateProfile from '@/components/candidate/CandidateProfile';
 import AdminDashboard from '@/components/admin/AdminDashboard';
+import TestResponsiveAdmin from '@/components/admin/TestResponsiveAdmin';
 import authService from '@/services/authService';
 
 function App() {
@@ -117,6 +118,9 @@ function App() {
               
               {/* Route de fallback pour l'ancien dashboard */}
               <Route path="/dashboard" element={<DashboardPage user={user} onNavigate={handleNavigation} />} />
+              
+              {/* Route de test pour le nouveau dashboard responsive */}
+              <Route path="/test-admin" element={<TestResponsiveAdmin />} />
             </Routes>
           </AnimatePresence>
         </main>
