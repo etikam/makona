@@ -21,9 +21,10 @@ import { toast } from '@/components/ui/use-toast';
 import adminService from '@/services/adminService';
 import categoryService from '@/services/categoryService';
 import CandidaturesManagement from './CandidaturesManagement';
+import AdminCandidaturesManagement from './AdminCandidaturesManagement';
 
 const CandidatesManagement = () => {
-  const [activeSubTab, setActiveSubTab] = useState('list'); // 'list' ou 'validation'
+  const [activeSubTab, setActiveSubTab] = useState('list'); // 'list', 'validation' ou 'candidatures'
   const [candidates, setCandidates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({});
@@ -68,6 +69,10 @@ const CandidatesManagement = () => {
     youtube_url: '',
     website_url: ''
   });
+  
+  // États pour les erreurs de validation des formulaires
+  const [formErrors, setFormErrors] = useState({});
+  const [candidatureErrors, setCandidatureErrors] = useState({});
 
   useEffect(() => {
     loadCandidates();
@@ -285,12 +290,42 @@ const CandidatesManagement = () => {
   };
 
   const handleCreateCandidature = async () => {
+    // Réinitialiser les erreurs
+    setCandidatureErrors({});
+    
+    // Validation côté client
+    const errors = {};
+    
     if (!candidatureData.category) {
-      toast({
-        title: "Erreur",
-        description: "Veuillez sélectionner une catégorie",
-        variant: "destructive"
-      });
+      errors.category = "Veuillez sélectionner une catégorie";
+    }
+    
+    if (!candidatureData.description.trim()) {
+      errors.description = "Veuillez saisir une description";
+    }
+    
+    // Vérifier les fichiers requis
+    const selectedCategory = categories.find(cat => cat.id.toString() === candidatureData.category);
+    if (selectedCategory) {
+      if (selectedCategory.requires_photo && (!candidatureData.files.photo || candidatureData.files.photo.length === 0)) {
+        errors.photo = "Des photos sont requises pour cette catégorie";
+      }
+      if (selectedCategory.requires_video && (!candidatureData.files.video || candidatureData.files.video.length === 0)) {
+        errors.video = "Des vidéos sont requises pour cette catégorie";
+      }
+      if (selectedCategory.requires_audio && (!candidatureData.files.audio || candidatureData.files.audio.length === 0)) {
+        errors.audio = "Des fichiers audio sont requis pour cette catégorie";
+      }
+      if (selectedCategory.requires_portfolio && (!candidatureData.files.portfolio || candidatureData.files.portfolio.length === 0)) {
+        errors.portfolio = "Un portfolio est requis pour cette catégorie";
+      }
+      if (selectedCategory.requires_documents && (!candidatureData.files.documents || candidatureData.files.documents.length === 0)) {
+        errors.documents = "Des documents sont requis pour cette catégorie";
+      }
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      setCandidatureErrors(errors);
       return;
     }
 
@@ -305,7 +340,6 @@ const CandidatesManagement = () => {
       const candidature = await adminService.createCandidature(candidatureDataToSend);
 
       // Ajouter les fichiers si il y en a
-      const selectedCategory = categories.find(cat => cat.id.toString() === candidatureData.category);
       if (selectedCategory) {
         const fileTypes = ['photo', 'video', 'audio', 'portfolio', 'documents'];
         
@@ -332,11 +366,22 @@ const CandidatesManagement = () => {
       resetCandidatureForm();
       loadCandidates(); // Recharger pour mettre à jour les statistiques
     } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de créer la candidature",
-        variant: "destructive"
-      });
+      // Gérer les erreurs de validation du serveur
+      if (error.message && error.message.includes('file_type')) {
+        setCandidatureErrors({ file_type: 'Le type de fichier est obligatoire' });
+      } else if (error.message && error.message.includes('file')) {
+        setCandidatureErrors({ file: 'Aucun fichier n\'a été soumis' });
+      } else if (error.message && error.message.includes('category')) {
+        setCandidatureErrors({ category: 'La catégorie est obligatoire' });
+      } else if (error.message && error.message.includes('description')) {
+        setCandidatureErrors({ description: 'La description est obligatoire' });
+      } else {
+        toast({
+          title: "Erreur",
+          description: "Impossible de créer la candidature",
+          variant: "destructive"
+        });
+      }
     }
   };
 
@@ -387,6 +432,7 @@ const CandidatesManagement = () => {
   };
 
   const openCandidatureModal = () => {
+    setCandidatureErrors({});
     setShowCandidatureModal(true);
     loadCategories();
   };
@@ -480,6 +526,17 @@ const CandidatesManagement = () => {
           >
             <CheckSquare className="w-4 h-4 flex-shrink-0" />
             <span className="font-medium">Validation Candidatures</span>
+          </button>
+          <button
+            onClick={() => setActiveSubTab('candidatures')}
+            className={`flex items-center justify-center sm:justify-start gap-2 px-3 sm:px-4 py-2 rounded-md transition-all duration-200 text-sm ${
+              activeSubTab === 'candidatures'
+                ? 'bg-blue-600 text-white shadow-lg'
+                : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+            }`}
+          >
+            <FileText className="w-4 h-4 flex-shrink-0" />
+            <span className="font-medium">Candidatures</span>
           </button>
         </div>
       </div>
@@ -678,7 +735,7 @@ const CandidatesManagement = () => {
               </div>
             )}
           </motion.div>
-        ) : (
+        ) : activeSubTab === 'validation' ? (
           <motion.div
             key="validation"
             initial={{ opacity: 0, x: 20 }}
@@ -687,6 +744,16 @@ const CandidatesManagement = () => {
             transition={{ duration: 0.2 }}
           >
             <CandidaturesManagement />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="candidatures"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.2 }}
+          >
+            <AdminCandidaturesManagement />
           </motion.div>
         )}
       </AnimatePresence>
@@ -1159,9 +1226,15 @@ const CandidatesManagement = () => {
                     <Label htmlFor="category" className="text-white">Catégorie *</Label>
                     <Select 
                       value={candidatureData.category} 
-                      onValueChange={handleCategoryChange}
+                      onValueChange={(value) => {
+                        handleCategoryChange(value);
+                        // Effacer l'erreur quand l'utilisateur sélectionne
+                        if (candidatureErrors.category) {
+                          setCandidatureErrors(prev => ({ ...prev, category: '' }));
+                        }
+                      }}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className={candidatureErrors.category ? 'border-red-500' : ''}>
                         <SelectValue placeholder="Sélectionner une catégorie" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1179,6 +1252,9 @@ const CandidatesManagement = () => {
                         ))}
                       </SelectContent>
                     </Select>
+                    {candidatureErrors.category && (
+                      <p className="text-red-400 text-sm mt-1">{candidatureErrors.category}</p>
+                    )}
                   </div>
 
                   <div>
@@ -1186,10 +1262,20 @@ const CandidatesManagement = () => {
                     <Textarea
                       id="description"
                       value={candidatureData.description}
-                      onChange={(e) => setCandidatureData(prev => ({ ...prev, description: e.target.value }))}
+                      onChange={(e) => {
+                        setCandidatureData(prev => ({ ...prev, description: e.target.value }));
+                        // Effacer l'erreur quand l'utilisateur tape
+                        if (candidatureErrors.description) {
+                          setCandidatureErrors(prev => ({ ...prev, description: '' }));
+                        }
+                      }}
                       placeholder="Décrivez votre candidature..."
                       rows={4}
+                      className={candidatureErrors.description ? 'border-red-500' : ''}
                     />
+                    {candidatureErrors.description && (
+                      <p className="text-red-400 text-sm mt-1">{candidatureErrors.description}</p>
+                    )}
                   </div>
                 </div>
 
@@ -1222,7 +1308,9 @@ const CandidatesManagement = () => {
                               {fileType.label} *
                             </Label>
                             
-                            <div className="border-2 border-dashed border-gray-600 rounded-lg p-4 hover:border-gray-500 transition-colors bg-gray-800/30">
+                            <div className={`border-2 border-dashed rounded-lg p-4 hover:border-gray-500 transition-colors bg-gray-800/30 ${
+                              candidatureErrors[fileType.key] ? 'border-red-500' : 'border-gray-600'
+                            }`}>
                               <input
                                 type="file"
                                 multiple
@@ -1231,7 +1319,13 @@ const CandidatesManagement = () => {
                                        fileType.key === 'audio' ? 'audio/*' :
                                        fileType.key === 'portfolio' ? '.pdf,.doc,.docx,.txt' :
                                        '.pdf,.doc,.docx,.txt'}
-                                onChange={(e) => handleFileChange(fileType.key, Array.from(e.target.files))}
+                                onChange={(e) => {
+                                  handleFileChange(fileType.key, Array.from(e.target.files));
+                                  // Effacer l'erreur quand l'utilisateur sélectionne des fichiers
+                                  if (candidatureErrors[fileType.key]) {
+                                    setCandidatureErrors(prev => ({ ...prev, [fileType.key]: '' }));
+                                  }
+                                }}
                                 className="hidden"
                                 id={`file-${fileType.key}`}
                               />
@@ -1254,6 +1348,10 @@ const CandidatesManagement = () => {
                                 </p>
                               </label>
                             </div>
+                            
+                            {candidatureErrors[fileType.key] && (
+                              <p className="text-red-400 text-sm">{candidatureErrors[fileType.key]}</p>
+                            )}
                             
                             {/* Affichage des fichiers sélectionnés */}
                             {candidatureData.files[fileType.key] && candidatureData.files[fileType.key].length > 0 && (

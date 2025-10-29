@@ -3,6 +3,7 @@ Serializers pour l'app candidates
 """
 from rest_framework import serializers
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 from .models import Candidature, CandidatureFile
 from categories.models import Category
@@ -246,17 +247,63 @@ class CandidatureAdminSerializer(serializers.ModelSerializer):
     candidate_phone = serializers.CharField(source='candidate.phone', read_only=True)
     candidate_country = serializers.CharField(source='candidate.country', read_only=True)
     category_name = serializers.CharField(source='category.name', read_only=True)
+    category_class_name = serializers.CharField(source='category.category_class.name', read_only=True)
     reviewed_by_name = serializers.CharField(source='reviewed_by.get_full_name', read_only=True)
     files = CandidatureFileSerializer(many=True, read_only=True)
+    vote_count = serializers.SerializerMethodField()
+    ranking = serializers.SerializerMethodField()
+    can_be_modified = serializers.SerializerMethodField()
     
     class Meta:
         model = Candidature
         fields = [
             'id', 'candidate', 'candidate_name', 'candidate_email',
             'candidate_phone', 'candidate_country', 'category', 'category_name',
-            'status', 'submitted_at', 'reviewed_at', 'reviewed_by',
-            'reviewed_by_name', 'rejection_reason', 'files'
+            'category_class_name', 'status', 'published', 'submitted_at', 
+            'reviewed_at', 'reviewed_by', 'reviewed_by_name', 'rejection_reason', 
+            'description', 'files', 'vote_count', 'ranking', 'can_be_modified'
         ]
         read_only_fields = [
             'id', 'candidate', 'category', 'submitted_at'
         ]
+    
+    def get_vote_count(self, obj):
+        """Retourne le nombre de votes reçus"""
+        return obj.get_vote_count()
+    
+    def get_ranking(self, obj):
+        """Retourne le rang dans la catégorie"""
+        return obj.get_ranking_in_category()
+    
+    def get_can_be_modified(self, obj):
+        """Retourne si la candidature peut être modifiée"""
+        return obj.can_be_modified()
+
+
+class CandidatureAdminCreateSerializer(serializers.ModelSerializer):
+    """
+    Serializer pour la création de candidatures par l'admin
+    """
+    candidate_name = serializers.CharField(source='candidate.get_full_name', read_only=True)
+    candidate_email = serializers.CharField(source='candidate.email', read_only=True)
+    category_name = serializers.CharField(source='category.name', read_only=True)
+    category_class_name = serializers.CharField(source='category.category_class.name', read_only=True)
+    can_be_modified = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Candidature
+        fields = [
+            'id', 'candidate', 'candidate_name', 'candidate_email', 'category', 
+            'category_name', 'category_class_name', 'description', 'status', 
+            'published', 'submitted_at', 'can_be_modified'
+        ]
+        read_only_fields = ['id', 'submitted_at']
+    
+    def create(self, validated_data):
+        # S'assurer que submitted_at est défini
+        validated_data['submitted_at'] = timezone.now()
+        return super().create(validated_data)
+    
+    def get_can_be_modified(self, obj):
+        """Retourne si la candidature peut être modifiée"""
+        return obj.can_be_modified()

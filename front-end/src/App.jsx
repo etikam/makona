@@ -21,27 +21,73 @@ import authService from '@/services/authService';
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
 
   // Vérifier l'authentification au chargement
   useEffect(() => {
-    const storedUser = authService.getStoredUser();
-    if (storedUser) {
-      setUser(storedUser);
-      setIsAuthenticated(true);
-    }
+    const checkAuth = async () => {
+      const storedUser = authService.getStoredUser();
+      if (storedUser) {
+        // Vérifier si l'utilisateur est toujours connecté via l'API
+        try {
+          const profileResponse = await authService.getProfile();
+          if (profileResponse.success) {
+            // Pour les candidats, récupérer les données complètes du dashboard
+            if (profileResponse.user.user_type === 'candidate') {
+              try {
+                const candidateService = (await import('@/services/candidateService')).default;
+                const dashboardData = await candidateService.getDashboard();
+                setUser(dashboardData.user);
+              } catch (error) {
+                // Fallback sur les données de base si le dashboard échoue
+                setUser(profileResponse.user);
+              }
+            } else {
+              setUser(profileResponse.user);
+            }
+            setIsAuthenticated(true);
+          } else {
+            // L'utilisateur n'est plus connecté, nettoyer le localStorage
+            localStorage.removeItem('user');
+            setIsAuthenticated(false);
+            setUser(null);
+          }
+        } catch (error) {
+          console.error('Erreur de vérification d\'authentification:', error);
+          // En cas d'erreur, nettoyer le localStorage
+          localStorage.removeItem('user');
+          setIsAuthenticated(false);
+          setUser(null);
+        }
+      }
+      setIsLoading(false);
+    };
+    
+    checkAuth();
   }, []);
 
-  const handleLogin = (userData) => {
-    setIsAuthenticated(true);
-    setUser(userData);
-    
-    // Redirection selon le type d'utilisateur
-    if (userData.user_type === 'admin') {
-      navigate('/admin/dashboard');
+  const handleLogin = async (userData) => {
+    // Pour les candidats, récupérer les données complètes du dashboard
+    if (userData.user_type === 'candidate') {
+      try {
+        const candidateService = (await import('@/services/candidateService')).default;
+        const dashboardData = await candidateService.getDashboard();
+        setUser(dashboardData.user);
+        setIsAuthenticated(true);
+        navigate('/candidate/profile');
+      } catch (error) {
+        console.error('Erreur lors du chargement du dashboard:', error);
+        // Fallback sur les données de base si le dashboard échoue
+        setUser(userData);
+        setIsAuthenticated(true);
+        navigate('/candidate/profile');
+      }
     } else {
-      navigate('/candidate/profile');
+      setUser(userData);
+      setIsAuthenticated(true);
+      navigate('/admin/dashboard');
     }
   };
 
@@ -60,6 +106,18 @@ function App() {
   const handleNavigation = (path) => {
     navigate(path);
   };
+
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-makona-pattern">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-white text-lg">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <HelmetProvider>
@@ -87,7 +145,7 @@ function App() {
               <Route 
                 path="/candidate/profile" 
                 element={
-                  isAuthenticated && user?.user_type === 'candidate' ? 
+                  isAuthenticated && user ? 
                     <CandidateProfile user={user} onLogout={handleLogout} onNavigate={handleNavigation} /> : 
                     <AuthPage onLogin={handleLogin} onNavigate={handleNavigation} />
                 } 

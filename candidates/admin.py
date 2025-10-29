@@ -6,7 +6,7 @@ from django.utils.html import format_html
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
-from .models import Candidature, CandidatureFile
+from .models import Candidature, CandidatureFile, Vote
 
 
 class CandidatureFileInline(admin.TabularInline):
@@ -185,4 +185,44 @@ class CandidatureFileAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         return super().get_queryset(request).select_related(
             'candidature__candidate', 'candidature__category'
+        )
+
+
+@admin.register(Vote)
+class VoteAdmin(admin.ModelAdmin):
+    """
+    Admin pour le modèle Vote
+    """
+    list_display = [
+        'candidature_info', 'voter_name', 'created_at'
+    ]
+    list_filter = ['created_at', 'candidature__category']
+    search_fields = [
+        'candidature__candidate__first_name',
+        'candidature__candidate__last_name',
+        'voter__first_name',
+        'voter__last_name',
+        'voter__email'
+    ]
+    readonly_fields = ['created_at']
+    
+    fieldsets = (
+        ('Informations du vote', {
+            'fields': ('candidature', 'voter', 'created_at')
+        }),
+    )
+    
+    def candidature_info(self, obj):
+        return f"{obj.candidature.candidate.get_full_name()} - {obj.candidature.category.name}"
+    candidature_info.short_description = "Candidature"
+    candidature_info.admin_order_field = 'candidature__candidate__first_name'
+    
+    def voter_name(self, obj):
+        return obj.voter.get_full_name()
+    voter_name.short_description = "Votant"
+    voter_name.admin_order_field = 'voter__first_name'
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related(
+            'candidature__candidate', 'candidature__category', 'voter'
         )

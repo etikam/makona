@@ -52,6 +52,24 @@ class AdminService {
   async deleteUser(userId) {
     return await apiService.delete(`/admin/accounts/users/${userId}/`);
   }
+
+  /**
+   * Récupérer tous les candidats
+   */
+  async getCandidates(params = {}) {
+    const queryParams = new URLSearchParams();
+    
+    if (params.search) queryParams.append('search', params.search);
+    if (params.is_verified !== undefined) queryParams.append('is_verified', params.is_verified);
+    if (params.is_active !== undefined) queryParams.append('is_active', params.is_active);
+    if (params.page) queryParams.append('page', params.page);
+    if (params.page_size) queryParams.append('page_size', params.page_size);
+    
+    const queryString = queryParams.toString();
+    const endpoint = queryString ? `/admin/accounts/users/?${queryString}&user_type=candidate` : '/admin/accounts/users/?user_type=candidate';
+    
+    return await apiService.get(endpoint);
+  }
   
   /**
    * Récupérer les candidatures d'un utilisateur
@@ -139,21 +157,21 @@ class AdminService {
    * Mettre à jour une candidature
    */
   async updateCandidature(candidatureId, candidatureData) {
-    return await apiService.put(`/admin/candidates/candidatures/${candidatureId}/`, candidatureData);
+    return await apiService.put(`/admin/candidates/candidatures/${candidatureId}/update/`, candidatureData);
   }
   
   /**
    * Créer une candidature
    */
   async createCandidature(candidatureData) {
-    return await apiService.post('/admin/candidates/candidatures/', candidatureData);
+    return await apiService.post('/admin/candidates/candidatures/create/', candidatureData);
   }
   
   /**
    * Supprimer une candidature
    */
   async deleteCandidature(candidatureId) {
-    return await apiService.delete(`/admin/candidates/candidatures/${candidatureId}/`);
+    return await apiService.delete(`/admin/candidates/candidatures/${candidatureId}/delete/`);
   }
   
   /**
@@ -221,6 +239,40 @@ class AdminService {
    */
   async deleteCandidatureFile(candidatureId, fileId) {
     return await apiService.delete(`/admin/candidates/candidatures/${candidatureId}/files/${fileId}/`);
+  }
+
+  /**
+   * Récupérer toutes les candidatures avec filtres
+   */
+  async getCandidatures(params = {}) {
+    const queryParams = new URLSearchParams();
+    
+    if (params.search) queryParams.append('search', params.search);
+    if (params.status) queryParams.append('status', params.status);
+    if (params.category) queryParams.append('category', params.category);
+    if (params.candidate) queryParams.append('candidate', params.candidate);
+    if (params.published !== undefined) queryParams.append('published', params.published);
+    if (params.page) queryParams.append('page', params.page);
+    if (params.page_size) queryParams.append('page_size', params.page_size);
+    
+    const queryString = queryParams.toString();
+    const endpoint = queryString ? `/admin/candidates/candidatures/?${queryString}` : '/admin/candidates/candidatures/';
+    
+    return await apiService.get(endpoint);
+  }
+
+  /**
+   * Mettre à jour une candidature
+   */
+  async updateCandidature(candidatureId, candidatureData) {
+    return await apiService.put(`/admin/candidates/candidatures/${candidatureId}/update/`, candidatureData);
+  }
+
+  /**
+   * Supprimer une candidature
+   */
+  async deleteCandidature(candidatureId) {
+    return await apiService.delete(`/admin/candidates/candidatures/${candidatureId}/delete/`);
   }
   
   // ===== STATISTIQUES =====

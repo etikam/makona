@@ -217,7 +217,7 @@ const CategoriesSection = ({ onNavigateToCategory }) => {
                               >
                                   <div className="card-glass h-full flex flex-col group overflow-hidden">
                                       <div className="relative h-40">
-                                          <img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" alt={category.image} src="https://images.unsplash.com/photo-1595872018818-97555653a011" />
+                                          <img className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" alt={category.image} src="https://images.unsplash.com/photo-1595872018818-97555653a011" />
                                           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
                                           <div className="absolute top-3 left-3 w-10 h-10 bg-white/10 backdrop-blur-sm rounded-lg flex items-center justify-center">
                                               <category.icon className="w-6 h-6 text-yellow-400" />
@@ -253,7 +253,7 @@ const CategoriesSection = ({ onNavigateToCategory }) => {
                                 className="card-glass group overflow-hidden"
                             >
                                 <div className="relative h-40">
-                                    <img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" alt={category.image} src="https://images.unsplash.com/photo-1595872018818-97555653a011" />
+                                    <img className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" alt={category.image} src="https://images.unsplash.com/photo-1595872018818-97555653a011" />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
                                     <div className="absolute top-3 left-3 w-10 h-10 bg-white/10 backdrop-blur-sm rounded-lg flex items-center justify-center">
                                         <category.icon className="w-6 h-6 text-yellow-400" />

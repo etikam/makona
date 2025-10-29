@@ -1,0 +1,48 @@
+# Dockerfile pour le frontend React/Vite - Makona Awards 2025
+FROM node:18-alpine AS builder
+
+# Variables d'environnement
+ENV NODE_ENV=production
+
+# Définir le répertoire de travail
+WORKDIR /app
+
+# Copier les fichiers de dépendances
+COPY front-end/package*.json ./
+
+# Installer les dépendances
+RUN npm ci --only=production --silent
+
+# Copier le code source
+COPY front-end/ .
+
+# Construire l'application
+RUN npm run build
+
+# Stage de production avec serveur HTTP simple
+FROM node:18-alpine
+
+# Installer serve pour servir les fichiers statiques
+RUN npm install -g serve
+
+# Créer un utilisateur non-root
+RUN addgroup -g 1001 -S app && \
+    adduser -S -D -H -u 1001 -h /app -s /sbin/nologin -G app -g app app
+
+# Définir le répertoire de travail
+WORKDIR /app
+
+# Copier les fichiers construits depuis le stage builder
+COPY --from=builder /app/dist ./dist
+
+# Changer les permissions
+RUN chown -R app:app /app
+
+# Changer vers l'utilisateur non-root
+USER app
+
+# Exposer le port
+EXPOSE 3000
+
+# Démarrer le serveur
+CMD ["serve", "-s", "dist", "-l", "3000"]

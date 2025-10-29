@@ -29,12 +29,28 @@ const DashboardPage = ({ user, onNavigate }) => {
           >
             <div className="card-glass p-8 mb-8">
               <div className="flex flex-col md:flex-row items-center gap-6">
-                <div className="w-24 h-24 bg-gradient-to-br from-yellow-400 to-amber-600 rounded-full flex items-center justify-center">
-                  <User className="w-12 h-12 text-slate-900" />
+                <div className="w-24 h-24 bg-gradient-to-br from-yellow-400 to-amber-600 rounded-full flex items-center justify-center overflow-hidden border-4 border-white/20">
+                  {user?.profile_picture_url || user?.profile_picture ? (
+                    <img 
+                      src={user.profile_picture_url || `http://localhost:8000/media/${user.profile_picture}`} 
+                      alt="Photo de profil" 
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <User className="w-12 h-12 text-slate-900" />
+                  )}
                 </div>
                 
                 <div className="flex-1 text-center md:text-left">
-                  <h1 className="text-3xl font-bold text-white mb-2">{user?.name || 'Utilisateur'}</h1>
+                  <h1 className="text-3xl font-bold text-white mb-2">
+                    {user?.first_name && user?.last_name 
+                      ? `${user.first_name} ${user.last_name}` 
+                      : user?.name || 'Utilisateur'
+                    }
+                  </h1>
                   <div className="flex items-center justify-center md:justify-start gap-2 text-gray-400">
                     <Mail className="w-4 h-4" />
                     <span>{user?.email}</span>

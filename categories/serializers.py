@@ -82,6 +82,7 @@ class CategorySerializer(serializers.ModelSerializer):
             'id', 'category_class', 'name', 'slug', 'description',
             'is_active', 'requires_photo', 'requires_video', 'requires_portfolio',
             'requires_audio', 'requires_documents', 'max_video_duration', 'max_audio_duration',
+            'awards_trophy', 'awards_certificate', 'awards_monetary',
             'file_requirements', 'required_file_types', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'slug', 'created_at', 'updated_at']
@@ -103,7 +104,8 @@ class CategoryListSerializer(serializers.ModelSerializer):
             'id', 'category_class', 'name', 'slug', 'description',
             'is_active', 'requires_photo', 
             'requires_video', 'requires_portfolio', 'requires_audio', 
-            'requires_documents', 'max_video_duration', 'max_audio_duration'
+            'requires_documents', 'max_video_duration', 'max_audio_duration',
+            'awards_trophy', 'awards_certificate', 'awards_monetary'
         ]
 
 
@@ -121,6 +123,7 @@ class CategoryDetailSerializer(serializers.ModelSerializer):
             'id', 'category_class', 'name', 'slug', 'description',
             'is_active', 'requires_photo', 'requires_video', 'requires_portfolio',
             'requires_audio', 'requires_documents', 'max_video_duration', 'max_audio_duration',
+            'awards_trophy', 'awards_certificate', 'awards_monetary',
             'file_requirements', 'required_file_types', 'candidatures_count', 'created_at', 'updated_at'
         ]
     
@@ -144,7 +147,8 @@ class CategoryCreateUpdateSerializer(serializers.ModelSerializer):
         fields = [
             'category_class', 'name', 'description', 'is_active',
             'requires_photo', 'requires_video', 'requires_portfolio',
-            'requires_audio', 'requires_documents', 'max_video_duration', 'max_audio_duration'
+            'requires_audio', 'requires_documents', 'max_video_duration', 'max_audio_duration',
+            'awards_trophy', 'awards_certificate', 'awards_monetary'
         ]
     
     def validate_name(self, value):

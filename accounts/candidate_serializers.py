@@ -42,14 +42,30 @@ class CandidateProfileUpdateSerializer(serializers.ModelSerializer):
 
 class UserProfileSerializer(serializers.ModelSerializer):
     """Serializer pour les informations utilisateur du candidat"""
+    profile_picture_url = serializers.SerializerMethodField()
     
     class Meta:
         model = User
         fields = [
             'id', 'email', 'username', 'first_name', 'last_name', 
-            'phone', 'country', 'is_verified', 'created_at', 'updated_at'
+            'phone', 'country', 'is_verified', 'profile_picture', 'profile_picture_url', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'email', 'username', 'is_verified', 'created_at', 'updated_at']
+    
+    def get_profile_picture_url(self, obj):
+        if obj.profile_picture:
+            request = self.context.get('request')
+            if request:
+                # Utiliser build_absolute_uri pour construire l'URL complète
+                url = request.build_absolute_uri(obj.profile_picture.url)
+                # Décoder les caractères spéciaux pour éviter les problèmes d'affichage
+                import urllib.parse
+                return urllib.parse.unquote(url)
+            else:
+                # Fallback si pas de request (tests, etc.)
+                from django.conf import settings
+                return f"{settings.MEDIA_URL}{obj.profile_picture.name}"
+        return None
 
 
 class UserProfileUpdateSerializer(serializers.ModelSerializer):
@@ -57,7 +73,7 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'phone', 'country']
+        fields = ['first_name', 'last_name', 'phone', 'country', 'profile_picture']
     
     def validate_phone(self, value):
         if value and len(value) < 9:
@@ -88,14 +104,29 @@ class CandidatureSerializer(serializers.ModelSerializer):
     category = CategorySerializer(read_only=True)
     files = CandidatureFileSerializer(many=True, read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
+    vote_count = serializers.SerializerMethodField()
+    ranking = serializers.SerializerMethodField()
+    can_be_modified = serializers.SerializerMethodField()
     
     class Meta:
         model = Candidature
         fields = [
-            'id', 'category', 'description', 'status', 'status_display',
-            'submitted_at', 'reviewed_at', 'files'
+            'id', 'category', 'status', 'status_display', 'published',
+            'submitted_at', 'reviewed_at', 'files', 'vote_count', 'ranking', 'can_be_modified'
         ]
         read_only_fields = ['id', 'submitted_at', 'reviewed_at']
+    
+    def get_vote_count(self, obj):
+        """Retourne le nombre de votes reçus"""
+        return obj.get_vote_count()
+    
+    def get_ranking(self, obj):
+        """Retourne le rang dans la catégorie"""
+        return obj.get_ranking_in_category()
+    
+    def get_can_be_modified(self, obj):
+        """Retourne si la candidature peut être modifiée"""
+        return obj.can_be_modified()
 
 
 class CandidatureCreateSerializer(serializers.ModelSerializer):
@@ -103,7 +134,7 @@ class CandidatureCreateSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Candidature
-        fields = ['category', 'description']
+        fields = ['category']
     
     def validate_category(self, value):
         if not value.is_active:

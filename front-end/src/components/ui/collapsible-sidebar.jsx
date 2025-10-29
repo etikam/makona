@@ -18,6 +18,7 @@ const CollapsibleSidebar = ({
   isOpen,
   onToggle,
   children,
+  user,
   className = ""
 }) => {
   const [isMobile, setIsMobile] = useState(false);
@@ -158,12 +159,34 @@ const CollapsibleSidebar = ({
                   exit={{ opacity: 0, y: 20 }}
                   className="flex items-center gap-3"
                 >
-                  <div className="w-8 h-8 rounded-full bg-yellow-500 flex items-center justify-center">
-                    <span className="text-gray-900 font-bold text-xs">KE</span>
+                  <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-gray-600">
+                    {user?.profile_picture_url || user?.profile_picture ? (
+                      <img 
+                        src={user.profile_picture_url || `http://localhost:8000/media/${user.profile_picture}`} 
+                        alt="Photo de profil" 
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center">
+                        <span className="text-gray-900 font-bold text-xs">
+                          {user?.first_name?.charAt(0) || user?.last_name?.charAt(0) || 'A'}
+                        </span>
+                      </div>
+                    )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-white truncate">Admin User</p>
-                    <p className="text-xs text-gray-400">Administrateur</p>
+                    <p className="text-sm font-medium text-white truncate">
+                      {user?.first_name && user?.last_name 
+                        ? `${user.first_name} ${user.last_name}` 
+                        : user?.username || 'Utilisateur'
+                      }
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      {user?.user_type === 'admin' ? 'Administrateur' : 'Candidat'}
+                    </p>
                   </div>
                 </motion.div>
               ) : (
@@ -174,8 +197,23 @@ const CollapsibleSidebar = ({
                   exit={{ opacity: 0, scale: 0.8 }}
                   className="flex justify-center"
                 >
-                  <div className="w-8 h-8 rounded-full bg-yellow-500 flex items-center justify-center">
-                    <span className="text-gray-900 font-bold text-xs">KE</span>
+                  <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-gray-600">
+                    {user?.profile_picture_url || user?.profile_picture ? (
+                      <img 
+                        src={user.profile_picture_url || `http://localhost:8000/media/${user.profile_picture}`} 
+                        alt="Photo de profil" 
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center">
+                        <span className="text-gray-900 font-bold text-xs">
+                          {user?.first_name?.charAt(0) || user?.last_name?.charAt(0) || 'A'}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               )}

@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
-import { Mail, Lock, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Mail, Lock, ArrowLeft, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
 import authService from '@/services/authService';
@@ -11,6 +11,7 @@ const AuthPage = ({ onLogin, onNavigate }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -47,18 +48,23 @@ const AuthPage = ({ onLogin, onNavigate }) => {
           description: `Bienvenue ${result.user.first_name || result.user.email}`,
         });
         
-        onLogin(result.user);
+        // Attendre que handleLogin se termine
+        await onLogin(result.user);
       } else {
+        // Afficher le message d'erreur spécifique
+        const errorMessage = result.error || "Erreur de connexion";
         toast({
           title: "Erreur de connexion",
-          description: result.error,
+          description: errorMessage,
           variant: "destructive"
         });
       }
     } catch (error) {
+      // Afficher le message d'erreur spécifique
+      const errorMessage = error.message || "Une erreur est survenue. Veuillez réessayer.";
       toast({
-        title: "Erreur",
-        description: "Une erreur est survenue. Veuillez réessayer.",
+        title: "Erreur de connexion",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -122,13 +128,24 @@ const AuthPage = ({ onLogin, onNavigate }) => {
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg pl-12 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                    className="w-full bg-white/5 border border-white/10 rounded-lg pl-12 pr-12 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-500"
                     placeholder="Votre mot de passe"
                     required
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
+                  </button>
                 </div>
               </div>
 

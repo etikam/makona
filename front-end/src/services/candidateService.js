@@ -24,7 +24,29 @@ class CandidateService {
   }
 
   async updateUserProfile(data) {
-    return await apiService.put('/candidate/user-profile/', data);
+    // Si il y a une photo de profil, utiliser FormData
+    if (data.profile_picture) {
+      const formData = new FormData();
+      
+      // Ajouter les champs texte
+      formData.append('first_name', data.first_name || '');
+      formData.append('last_name', data.last_name || '');
+      formData.append('phone', data.phone || '');
+      formData.append('country', data.country || '');
+      
+      // Ajouter le fichier
+      formData.append('profile_picture', data.profile_picture);
+      
+      return await apiService.put('/candidate/user-profile/', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+    } else {
+      // Si pas de fichier, envoyer en JSON normal
+      const { profile_picture, ...jsonData } = data;
+      return await apiService.put('/candidate/user-profile/', jsonData);
+    }
   }
 
   // Candidatures
@@ -65,6 +87,25 @@ class CandidateService {
         'Content-Type': 'multipart/form-data',
       },
     });
+  }
+
+  // Mise à jour d'une candidature
+  async updateCandidature(candidatureId, data) {
+    const formData = new FormData();
+    
+    // Ajouter la description
+    formData.append('description', data.description);
+    
+    // Ajouter les nouveaux fichiers
+    Object.entries(data.files).forEach(([fileType, files]) => {
+      files.forEach((file, index) => {
+        if (file instanceof File) {
+          formData.append(`${fileType}_files`, file);
+        }
+      });
+    });
+    
+    return await apiService.put(`/candidatures/my-candidatures/${candidatureId}/update/`, formData);
   }
 }
 

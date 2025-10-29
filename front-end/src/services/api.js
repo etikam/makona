@@ -27,6 +27,20 @@ class ApiService {
   async handleResponse(response) {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      
+      // Gérer les erreurs de validation Django REST Framework
+      if (errorData.non_field_errors && errorData.non_field_errors.length > 0) {
+        throw new Error(errorData.non_field_errors[0]);
+      }
+      
+      // Gérer les erreurs de champ spécifiques
+      if (typeof errorData === 'object' && !errorData.detail && !errorData.message) {
+        const fieldErrors = Object.values(errorData).flat();
+        if (fieldErrors.length > 0) {
+          throw new Error(fieldErrors[0]);
+        }
+      }
+      
       throw new Error(errorData.detail || errorData.message || `HTTP ${response.status}`);
     }
 
@@ -65,27 +79,63 @@ class ApiService {
   }
 
   async post(endpoint, data, options = {}) {
-    return this.request(endpoint, {
+    const requestOptions = {
       method: 'POST',
-      body: JSON.stringify(data),
       ...options,
-    });
+    };
+
+    // Si c'est FormData, ne pas stringify et laisser le navigateur gérer les headers
+    if (data instanceof FormData) {
+      requestOptions.body = data;
+      // Ne pas définir Content-Type pour FormData, le navigateur le fera automatiquement
+      if (requestOptions.headers) {
+        delete requestOptions.headers['Content-Type'];
+      }
+    } else {
+      requestOptions.body = JSON.stringify(data);
+    }
+
+    return this.request(endpoint, requestOptions);
   }
 
   async put(endpoint, data, options = {}) {
-    return this.request(endpoint, {
+    const requestOptions = {
       method: 'PUT',
-      body: JSON.stringify(data),
       ...options,
-    });
+    };
+
+    // Si c'est FormData, ne pas stringify et laisser le navigateur gérer les headers
+    if (data instanceof FormData) {
+      requestOptions.body = data;
+      // Ne pas définir Content-Type pour FormData, le navigateur le fera automatiquement
+      if (requestOptions.headers) {
+        delete requestOptions.headers['Content-Type'];
+      }
+    } else {
+      requestOptions.body = JSON.stringify(data);
+    }
+
+    return this.request(endpoint, requestOptions);
   }
 
   async patch(endpoint, data, options = {}) {
-    return this.request(endpoint, {
+    const requestOptions = {
       method: 'PATCH',
-      body: JSON.stringify(data),
       ...options,
-    });
+    };
+
+    // Si c'est FormData, ne pas stringify et laisser le navigateur gérer les headers
+    if (data instanceof FormData) {
+      requestOptions.body = data;
+      // Ne pas définir Content-Type pour FormData, le navigateur le fera automatiquement
+      if (requestOptions.headers) {
+        delete requestOptions.headers['Content-Type'];
+      }
+    } else {
+      requestOptions.body = JSON.stringify(data);
+    }
+
+    return this.request(endpoint, requestOptions);
   }
 
   async delete(endpoint, options = {}) {

@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  # Reverse Proxy Traefik - Service indépendant (Production)
+  traefik:
+    image: traefik:v3.0
+    container_name: makona_traefik_prod
+    restart: unless-stopped
+    command:
+      - "--configfile=/etc/traefik/traefik.yml"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik/dynamic_conf:/etc/traefik/dynamic_conf:ro
+      - ./traefik/middlewares:/etc/traefik/middlewares:ro
+      - ./traefik/security:/etc/traefik/security:ro
+      - ./traefik/tls:/etc/traefik/tls:ro
+      - ./traefik/routers:/etc/traefik/routers:ro
+      - traefik_data_prod:/letsencrypt
+      - traefik_logs_prod:/var/log/traefik
+    networks:
+      - makona_network
+    environment:
+      - DOMAIN=${DOMAIN}
+      - ACME_EMAIL=${ACME_EMAIL}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.${DOMAIN}`)"
+      - "traefik.http.routers.traefik.entrypoints=websecure"
+      - "traefik.http.routers.traefik.tls.certresolver=letsencrypt"
+      - "traefik.http.services.traefik.loadbalancer.server.port=8080"
+
+volumes:
+  traefik_data_prod:
+    driver: local
+  traefik_logs_prod:
+    driver: local
+
+networks:
+  makona_network:
+    driver: bridge
+    external: false

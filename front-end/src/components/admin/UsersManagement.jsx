@@ -51,6 +51,10 @@ const UsersManagement = () => {
     youtube_url: '',
     website_url: ''
   });
+  
+  // États pour les erreurs de validation des formulaires
+  const [formErrors, setFormErrors] = useState({});
+  const [editFormErrors, setEditFormErrors] = useState({});
 
   useEffect(() => {
     loadUsers();
@@ -116,19 +120,48 @@ const UsersManagement = () => {
   };
 
   const handleEditUser = async () => {
-    try {
-      if (!editingUser) return;
-
-      // Validation des champs requis
-      if (!formData.email || !formData.username || !formData.first_name || !formData.last_name) {
-        toast({
-          title: "Erreur",
-          description: "Veuillez remplir tous les champs obligatoires",
-          variant: "destructive"
-        });
-        return;
+    if (!editingUser) return;
+    
+    // Réinitialiser les erreurs
+    setEditFormErrors({});
+    
+    // Validation côté client
+    const errors = {};
+    
+    if (!formData.email) {
+      errors.email = "L'email est obligatoire";
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      errors.email = "Format d'email invalide";
+    }
+    
+    if (!formData.username) {
+      errors.username = "Le nom d'utilisateur est obligatoire";
+    }
+    
+    if (!formData.first_name) {
+      errors.first_name = "Le prénom est obligatoire";
+    }
+    
+    if (!formData.last_name) {
+      errors.last_name = "Le nom est obligatoire";
+    }
+    
+    // Validation du mot de passe seulement s'il est fourni
+    if (formData.password) {
+      if (formData.password.length < 8) {
+        errors.password = "Le mot de passe doit contenir au moins 8 caractères";
       }
+      if (formData.password !== formData.password_confirm) {
+        errors.password_confirm = "Les mots de passe ne correspondent pas";
+      }
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      setEditFormErrors(errors);
+      return;
+    }
 
+    try {
       await adminService.updateUser(editingUser.id, formData);
       toast({
         title: "Succès",
@@ -139,16 +172,26 @@ const UsersManagement = () => {
       resetForm();
       loadUsers();
     } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de modifier l'utilisateur",
-        variant: "destructive"
-      });
+      // Gérer les erreurs de validation du serveur
+      if (error.message && error.message.includes('email')) {
+        setEditFormErrors({ email: 'Cet email est déjà utilisé' });
+      } else if (error.message && error.message.includes('username')) {
+        setEditFormErrors({ username: 'Ce nom d\'utilisateur est déjà utilisé' });
+      } else if (error.message && error.message.includes('password')) {
+        setEditFormErrors({ password: 'Le mot de passe ne respecte pas les critères' });
+      } else {
+        toast({
+          title: "Erreur",
+          description: "Impossible de modifier l'utilisateur",
+          variant: "destructive"
+        });
+      }
     }
   };
 
   const openEditModal = (user) => {
     setEditingUser(user);
+    setEditFormErrors({});
     setFormData({
       email: user.email || '',
       username: user.username || '',
@@ -240,27 +283,55 @@ const UsersManagement = () => {
     });
   };
 
+  const openCreateModal = () => {
+    setFormErrors({});
+    resetForm();
+    setShowCreateModal(true);
+  };
+
   const handleCreateUser = async () => {
+    // Réinitialiser les erreurs
+    setFormErrors({});
+    
+    // Validation côté client
+    const errors = {};
+    
+    if (!formData.email) {
+      errors.email = "L'email est obligatoire";
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      errors.email = "Format d'email invalide";
+    }
+    
+    if (!formData.username) {
+      errors.username = "Le nom d'utilisateur est obligatoire";
+    }
+    
+    if (!formData.first_name) {
+      errors.first_name = "Le prénom est obligatoire";
+    }
+    
+    if (!formData.last_name) {
+      errors.last_name = "Le nom est obligatoire";
+    }
+    
+    if (!formData.password) {
+      errors.password = "Le mot de passe est obligatoire";
+    } else if (formData.password.length < 8) {
+      errors.password = "Le mot de passe doit contenir au moins 8 caractères";
+    }
+    
+    if (!formData.password_confirm) {
+      errors.password_confirm = "La confirmation du mot de passe est obligatoire";
+    } else if (formData.password !== formData.password_confirm) {
+      errors.password_confirm = "Les mots de passe ne correspondent pas";
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+
     try {
-      // Validation des mots de passe
-      if (formData.password !== formData.password_confirm) {
-        toast({
-          title: "Erreur",
-          description: "Les mots de passe ne correspondent pas",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      if (formData.password.length < 8) {
-        toast({
-          title: "Erreur",
-          description: "Le mot de passe doit contenir au moins 8 caractères",
-          variant: "destructive"
-        });
-        return;
-      }
-
       await adminService.createUser(formData);
       toast({
         title: "Succès",
@@ -270,11 +341,20 @@ const UsersManagement = () => {
       resetForm();
       loadUsers();
     } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de créer l'utilisateur",
-        variant: "destructive"
-      });
+      // Gérer les erreurs de validation du serveur
+      if (error.message && error.message.includes('email')) {
+        setFormErrors({ email: 'Cet email est déjà utilisé' });
+      } else if (error.message && error.message.includes('username')) {
+        setFormErrors({ username: 'Ce nom d\'utilisateur est déjà utilisé' });
+      } else if (error.message && error.message.includes('password')) {
+        setFormErrors({ password: 'Le mot de passe ne respecte pas les critères' });
+      } else {
+        toast({
+          title: "Erreur",
+          description: "Impossible de créer l'utilisateur",
+          variant: "destructive"
+        });
+      }
     }
   };
 
@@ -314,7 +394,7 @@ const UsersManagement = () => {
             <span className="xs:hidden">↻</span>
           </Button>
           <Button
-            onClick={() => setShowCreateModal(true)}
+            onClick={openCreateModal}
             size="sm"
             className="btn-primary text-xs sm:text-sm"
           >

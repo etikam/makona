@@ -1,0 +1,48 @@
+# Dockerfile pour le backend Django - Makona Awards 2025
+FROM python:3.11-slim
+
+# Variables d'environnement
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Créer un utilisateur non-root
+RUN groupadd -r django && useradd -r -g django django
+
+# Installer les dépendances système nécessaires
+RUN apt-get update && apt-get install -y \
+    --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Définir le répertoire de travail
+WORKDIR /app
+
+# Copier et installer les dépendances Python
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copier le code source
+COPY . .
+
+# Créer les répertoires nécessaires
+RUN mkdir -p /app/staticfiles /app/media /app/logs && \
+    chown -R django:django /app
+
+# Changer vers l'utilisateur non-root
+USER django
+
+# Exposer le port
+EXPOSE 8000
+
+# Script de démarrage
+COPY docker/entrypoint.sh /entrypoint.sh
+USER root
+RUN chmod +x /entrypoint.sh
+USER django
+
+# Point d'entrée
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "120", "config.wsgi:application"]

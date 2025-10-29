@@ -11,6 +11,7 @@ const AdminDashboardLayout = ({
   subtitle = "Gestion complète de la plateforme",
   activeTab = 'candidates',
   onTabChange,
+  user,
   className = ""
 }) => {
   const { success, error, warning, info } = useToast();
@@ -27,6 +28,7 @@ const AdminDashboardLayout = ({
       sidebarContent={sidebarContent}
       className={className}
       onTabChange={onTabChange}
+      user={user}
     >
       {/* Header */}
       <ResponsiveHeader

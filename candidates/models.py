@@ -42,11 +42,21 @@ class Candidature(models.Model):
         related_name='candidatures',
         verbose_name="Catégorie"
     )
+    description = models.TextField(
+        blank=True,
+        verbose_name="Description",
+        help_text="Description de la candidature par le candidat"
+    )
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
         default='pending',
         verbose_name="Statut"
+    )
+    published = models.BooleanField(
+        default=False,
+        verbose_name="Publiée",
+        help_text="La candidature est-elle publiée et visible au public ?"
     )
     submitted_at = models.DateTimeField(
         auto_now_add=True,
@@ -96,7 +106,36 @@ class Candidature(models.Model):
         """
         Vérifie si la candidature peut être modifiée
         """
-        return self.status == 'pending'
+        return self.status == 'pending' and not self.published
+    
+    def get_vote_count(self):
+        """
+        Retourne le nombre de votes reçus
+        """
+        return self.votes.count()
+    
+    def get_ranking_in_category(self):
+        """
+        Retourne le rang de cette candidature dans sa catégorie
+        """
+        if self.status != 'approved':
+            return None
+        
+        # Compter les candidatures approuvées dans la même catégorie avec plus de votes
+        better_candidatures = Candidature.objects.filter(
+            category=self.category,
+            status='approved'
+        ).annotate(
+            vote_count=models.Count('votes')
+        ).filter(
+            vote_count__gt=models.Subquery(
+                Candidature.objects.filter(id=self.id).annotate(
+                    my_vote_count=models.Count('votes')
+                ).values('my_vote_count')
+            )
+        ).count()
+        
+        return better_candidatures + 1
     
     def approve(self, reviewed_by):
         """
@@ -230,3 +269,34 @@ class CandidatureFile(models.Model):
             return False, "Le fichier doit être un document"
         
         return True, "Type de fichier valide"
+
+
+class Vote(models.Model):
+    """
+    Modèle pour les votes des utilisateurs sur les candidatures
+    """
+    candidature = models.ForeignKey(
+        Candidature,
+        on_delete=models.CASCADE,
+        related_name='votes',
+        verbose_name="Candidature"
+    )
+    voter = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='votes_given',
+        verbose_name="Votant"
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Date de vote"
+    )
+    
+    class Meta:
+        verbose_name = "Vote"
+        verbose_name_plural = "Votes"
+        unique_together = ('candidature', 'voter')  # Un utilisateur ne peut voter qu'une fois par candidature
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.voter.get_full_name()} a voté pour {self.candidature.candidate.get_full_name()}"

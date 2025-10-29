@@ -2,19 +2,18 @@
 URLs pour l'administration des candidatures
 """
 from django.urls import path
-from . import admin_views
+from . import views
 
 urlpatterns = [
     # Gestion des candidatures
-    path('candidatures/', admin_views.AdminCandidaturesView.as_view(), name='admin-candidatures-list'),
-    path('candidatures/<int:candidature_id>/', admin_views.AdminCandidatureDetailView.as_view(), name='admin-candidature-detail'),
-    path('candidatures/<int:candidature_id>/approve/', admin_views.AdminCandidatureApproveView.as_view(), name='admin-candidature-approve'),
-    path('candidatures/<int:candidature_id>/reject/', admin_views.AdminCandidatureRejectView.as_view(), name='admin-candidature-reject'),
-    
-    # Gestion des fichiers de candidature
-    path('candidatures/<int:candidature_id>/files/', admin_views.AdminCandidatureFilesView.as_view(), name='admin-candidature-files'),
-    path('candidatures/<int:candidature_id>/files/<int:file_id>/', admin_views.AdminCandidatureFileDetailView.as_view(), name='admin-candidature-file-detail'),
+    path('candidatures/', views.AdminCandidatureListView.as_view(), name='admin-candidatures-list'),
+    path('candidatures/create/', views.AdminCandidatureCreateView.as_view(), name='admin-candidature-create'),
+    path('candidatures/<int:pk>/', views.AdminCandidatureDetailView.as_view(), name='admin-candidature-detail'),
+    path('candidatures/<int:pk>/update/', views.AdminCandidatureUpdateView.as_view(), name='admin-candidature-update'),
+    path('candidatures/<int:pk>/delete/', views.AdminCandidatureDeleteView.as_view(), name='admin-candidature-delete'),
+    path('candidatures/<int:candidature_id>/approve/', views.approve_candidature_view, name='admin-candidature-approve'),
+    path('candidatures/<int:candidature_id>/reject/', views.reject_candidature_view, name='admin-candidature-reject'),
     
     # Statistiques
-    path('stats/', admin_views.admin_candidature_stats, name='admin-candidature-stats'),
+    path('stats/', views.candidature_stats_view, name='admin-candidature-stats'),
 ]

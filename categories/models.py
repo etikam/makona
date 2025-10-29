@@ -209,6 +209,24 @@ class Category(models.Model):
         help_text="Durée maximale autorisée pour les audios (en secondes)",
         validators=[validate_audio_duration]
     )
+    
+    # Configuration des prix
+    awards_trophy = models.BooleanField(
+        default=False,
+        verbose_name="Trophée",
+        help_text="Cette catégorie attribue un trophée"
+    )
+    awards_certificate = models.BooleanField(
+        default=False,
+        verbose_name="Satisfecit",
+        help_text="Cette catégorie attribue un satisfecit"
+    )
+    awards_monetary = models.BooleanField(
+        default=False,
+        verbose_name="Primes monétaires",
+        help_text="Cette catégorie attribue des primes monétaires"
+    )
+    
     # Métadonnées
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Date de création")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Date de modification")

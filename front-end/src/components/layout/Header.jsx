@@ -71,10 +71,25 @@ const Header = ({ isAuthenticated, user, onNavigate, onLogout }) => {
                       onNavigate('/candidate/profile');
                     }
                   }}
-                  className="text-white hover:text-yellow-400"
+                  className="text-white hover:text-yellow-400 flex items-center gap-3"
                 >
-                  <User className="w-4 h-4 mr-2" />
-                  {user?.first_name || user?.name || 'Mon Profil'}
+                  <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-white/20">
+                    {user?.profile_picture_url || user?.profile_picture ? (
+                      <img 
+                        src={user.profile_picture_url || `http://localhost:8000/media/${user.profile_picture}`} 
+                        alt="Photo de profil" 
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gray-700 flex items-center justify-center">
+                        <User className="w-4 h-4 text-gray-300" />
+                      </div>
+                    )}
+                  </div>
+                  <span>{user?.first_name || user?.name || 'Mon Profil'}</span>
                 </Button>
                 <Button
                   variant="ghost"
@@ -146,9 +161,25 @@ const Header = ({ isAuthenticated, user, onNavigate, onLogout }) => {
                     }
                     setMobileMenuOpen(false);
                   }}
-                  className="block w-full text-left py-2 text-gray-300 hover:text-yellow-400 transition-colors"
+                  className="flex items-center gap-3 w-full text-left py-2 text-gray-300 hover:text-yellow-400 transition-colors"
                 >
-                  Mon Profil
+                  <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-white/20">
+                    {user?.profile_picture_url || user?.profile_picture ? (
+                      <img 
+                        src={user.profile_picture_url || `http://localhost:8000/media/${user.profile_picture}`} 
+                        alt="Photo de profil" 
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gray-700 flex items-center justify-center">
+                        <User className="w-4 h-4 text-gray-300" />
+                      </div>
+                    )}
+                  </div>
+                  <span>{user?.first_name || user?.name || 'Mon Profil'}</span>
                 </button>
                 <button
                   onClick={() => {

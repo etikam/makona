@@ -10,8 +10,11 @@ import {
   File, Globe, Facebook, Instagram, Youtube, Mail,
   Phone, MapPin, Shield, CheckCircle, XCircle, Clock,
   BarChart3, TrendingUp, Users, Star, ChevronRight,
-  Save, X, Camera, Trash2, Download, RefreshCw
+  Save, X, Camera, Trash2, Download, RefreshCw,
+  Heart, Trophy
 } from 'lucide-react';
+import CandidatureDetails from './CandidatureDetails';
+import EditCandidatureModal from './EditCandidatureModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -22,15 +25,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from '@/components/ui/use-toast';
 import candidateService from '@/services/candidateService';
 
-const CandidateProfile = () => {
+const CandidateProfile = ({ user: currentUser, onLogout, onNavigate }) => {
   // États principaux
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
-  const [stats, setStats] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const [stats, setStats] = useState(null);
   
   // États pour les modales
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showUserModal, setShowUserModal] = useState(false);
   const [showCandidatureModal, setShowCandidatureModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   
@@ -47,7 +51,8 @@ const CandidateProfile = () => {
     first_name: '',
     last_name: '',
     phone: '',
-    country: ''
+    country: '',
+    profile_picture: null
   });
   
   const [candidatureForm, setCandidatureForm] = useState({
@@ -70,13 +75,40 @@ const CandidateProfile = () => {
   
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  
+  // États pour la visibilité des mots de passe
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
+  // États pour les erreurs de validation des formulaires
+  const [profileErrors, setProfileErrors] = useState({});
+  const [userErrors, setUserErrors] = useState({});
+  const [passwordErrors, setPasswordErrors] = useState({});
+  
+  // États pour les détails de candidature
+  const [selectedCandidature, setSelectedCandidature] = useState(null);
+  const [showCandidatureDetails, setShowCandidatureDetails] = useState(false);
+  
+  // États pour la modification de candidature
+  const [editingCandidature, setEditingCandidature] = useState(null);
+  const [showEditCandidature, setShowEditCandidature] = useState(false);
 
   // Chargement des données
   useEffect(() => {
-    loadDashboardData();
-    loadStats();
-    loadCategories();
-  }, []);
+    if (currentUser) {
+      loadDashboardData();
+      loadStats();
+      loadCategories();
+    } else {
+      toast({
+        title: "Erreur d'authentification",
+        description: "Vous devez être connecté pour accéder à cette page",
+        variant: "destructive"
+      });
+    }
+  }, [currentUser]);
+
 
   const loadDashboardData = async () => {
     try {
@@ -86,13 +118,14 @@ const CandidateProfile = () => {
       
       // Pré-remplir les formulaires
       if (data.candidate_profile) {
-        setProfileForm({
+        const profileData = {
           bio: data.candidate_profile.bio || '',
           facebook_url: data.candidate_profile.facebook_url || '',
           instagram_url: data.candidate_profile.instagram_url || '',
           youtube_url: data.candidate_profile.youtube_url || '',
           website_url: data.candidate_profile.website_url || ''
-        });
+        };
+        setProfileForm(profileData);
       }
       
       if (data.user) {
@@ -105,11 +138,11 @@ const CandidateProfile = () => {
       }
     } catch (error) {
       console.error('Erreur lors du chargement du dashboard:', error);
-      toast({
-        title: "Erreur",
+        toast({
+          title: "Erreur",
         description: "Impossible de charger les données du profil",
-        variant: "destructive"
-      });
+          variant: "destructive"
+        });
     } finally {
       setLoading(false);
     }
@@ -117,10 +150,12 @@ const CandidateProfile = () => {
 
   const loadStats = async () => {
     try {
+      console.log('🔄 Chargement des statistiques...');
       const data = await candidateService.getStats();
+      console.log('📊 Statistiques chargées:', data);
       setStats(data);
     } catch (error) {
-      console.error('Erreur lors du chargement des statistiques:', error);
+      console.error('❌ Erreur lors du chargement des statistiques:', error);
     }
   };
 
@@ -133,6 +168,76 @@ const CandidateProfile = () => {
     }
   };
 
+  // Fonction pour ouvrir la modale de profil et réinitialiser le formulaire
+  const openProfileModal = () => {
+    if (dashboardData?.candidate_profile) {
+      const profileData = {
+        bio: dashboardData.candidate_profile.bio || '',
+        facebook_url: dashboardData.candidate_profile.facebook_url || '',
+        instagram_url: dashboardData.candidate_profile.instagram_url || '',
+        youtube_url: dashboardData.candidate_profile.youtube_url || '',
+        website_url: dashboardData.candidate_profile.website_url || ''
+      };
+      setProfileForm(profileData);
+    }
+    // Réinitialiser les erreurs
+    setProfileErrors({});
+    setShowProfileModal(true);
+  };
+
+  // Fonction pour ouvrir la modale d'informations utilisateur
+  const openUserModal = () => {
+    if (dashboardData?.user) {
+      const userData = {
+        first_name: dashboardData.user.first_name || '',
+        last_name: dashboardData.user.last_name || '',
+        phone: dashboardData.user.phone || '',
+        country: dashboardData.user.country || '',
+        profile_picture: null
+      };
+      setUserForm(userData);
+    }
+    // Réinitialiser les erreurs
+    setUserErrors({});
+    setShowUserModal(true);
+  };
+
+  // Fonction pour ouvrir la modale de mot de passe et réinitialiser les erreurs
+  const openPasswordModal = () => {
+    setPasswordErrors({});
+    setShowPasswordModal(true);
+  };
+
+  // Fonction pour ouvrir les détails d'une candidature
+  const openCandidatureDetails = (candidature) => {
+    setSelectedCandidature(candidature);
+    setShowCandidatureDetails(true);
+  };
+
+  // Fonction pour fermer les détails de candidature
+  const closeCandidatureDetails = () => {
+    setSelectedCandidature(null);
+    setShowCandidatureDetails(false);
+  };
+
+  // Fonction pour ouvrir la modification d'une candidature
+  const openEditCandidature = (candidature) => {
+    setEditingCandidature(candidature);
+    setShowEditCandidature(true);
+  };
+
+  // Fonction pour fermer la modification de candidature
+  const closeEditCandidature = () => {
+    setEditingCandidature(null);
+    setShowEditCandidature(false);
+  };
+
+  // Fonction appelée après modification réussie
+  const handleCandidatureUpdateSuccess = () => {
+    loadDashboardData(); // Recharger les données
+    closeEditCandidature();
+  };
+
   // Gestion des formulaires
   const handleProfileUpdate = async () => {
     try {
@@ -142,14 +247,14 @@ const CandidateProfile = () => {
         description: "Profil mis à jour avec succès"
       });
       setShowProfileModal(false);
-      loadDashboardData();
+      await loadDashboardData();
     } catch (error) {
       toast({
         title: "Erreur",
         description: "Impossible de mettre à jour le profil",
         variant: "destructive"
       });
-    }
+      }
   };
 
   const handleUserUpdate = async () => {
@@ -164,13 +269,16 @@ const CandidateProfile = () => {
       toast({
         title: "Erreur",
         description: "Impossible de mettre à jour les informations",
-        variant: "destructive"
-      });
-    }
+          variant: "destructive"
+        });
+      }
   };
 
   const handlePasswordChange = async () => {
     try {
+      // Réinitialiser les erreurs
+      setPasswordErrors({});
+      
       await candidateService.changePassword(passwordForm);
       toast({
         title: "Succès",
@@ -183,11 +291,21 @@ const CandidateProfile = () => {
         confirm_password: ''
       });
     } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de modifier le mot de passe",
+      // Gérer les erreurs de validation
+      if (error.message && error.message.includes('current_password')) {
+        setPasswordErrors({ current_password: 'Le mot de passe actuel est incorrect.' });
+      } else if (error.message && error.message.includes('new_password')) {
+        setPasswordErrors({ new_password: 'Le nouveau mot de passe ne respecte pas les critères.' });
+      } else if (error.message && error.message.includes('confirm_password')) {
+        setPasswordErrors({ confirm_password: 'Les mots de passe ne correspondent pas.' });
+      } else {
+        // Erreur générale
+        toast({
+          title: "Erreur",
+          description: "Impossible de modifier le mot de passe",
         variant: "destructive"
       });
+      }
     }
   };
 
@@ -248,7 +366,7 @@ const CandidateProfile = () => {
   };
 
   if (loading) {
-    return (
+  return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
@@ -259,7 +377,7 @@ const CandidateProfile = () => {
   }
 
   if (!dashboardData) {
-    return (
+  return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
@@ -268,8 +386,8 @@ const CandidateProfile = () => {
           <Button onClick={loadDashboardData} className="bg-blue-600 hover:bg-blue-700">
             <RefreshCw className="w-4 h-4 mr-2" />
             Réessayer
-          </Button>
-        </div>
+            </Button>
+          </div>
       </div>
     );
   }
@@ -289,8 +407,20 @@ const CandidateProfile = () => {
           <div className="max-w-7xl mx-auto">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
-                  <User className="w-8 h-8 text-white" />
+                <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center overflow-hidden border-2 border-white/30">
+                  {user?.profile_picture_url || user?.profile_picture ? (
+                    <img 
+                      src={user.profile_picture_url || `http://localhost:8000/media/${user.profile_picture}`} 
+                      alt="Photo de profil" 
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        console.error('Erreur de chargement de l\'image:', e.target.src);
+                        e.target.style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <User className="w-8 h-8 text-white" />
+                  )}
                 </div>
                 <div>
                   <h1 className="text-2xl lg:text-3xl font-bold text-white">
@@ -302,25 +432,25 @@ const CandidateProfile = () => {
               
               <div className="flex flex-wrap gap-3">
                 <Button
-                  onClick={() => setShowProfileModal(true)}
+                  onClick={openProfileModal}
                   variant="outline"
                   className="bg-white/10 border-white/20 text-white hover:bg-white/20"
                 >
                   <Edit3 className="w-4 h-4 mr-2" />
                   Modifier le profil
                 </Button>
-                <Button
-                  onClick={() => setShowPasswordModal(true)}
-                  variant="outline"
+            <Button
+                  onClick={openPasswordModal}
+              variant="outline"
                   className="bg-white/10 border-white/20 text-white hover:bg-white/20"
-                >
+            >
                   <Shield className="w-4 h-4 mr-2" />
                   Mot de passe
-                </Button>
+            </Button>
+          </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
 
         <div className="max-w-7xl mx-auto p-6">
           {/* Navigation tabs */}
@@ -350,10 +480,10 @@ const CandidateProfile = () => {
           {/* Contenu des onglets */}
           <AnimatePresence mode="wait">
             {activeTab === 'overview' && (
-              <motion.div
+        <motion.div
                 key="overview"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 className="space-y-6"
               >
@@ -376,10 +506,10 @@ const CandidateProfile = () => {
                       <CardContent className="p-6">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-sm text-gray-400">En attente</p>
-                            <p className="text-2xl font-bold text-white">{stats.pending_candidatures}</p>
+                            <p className="text-sm text-gray-400">Catégories disponibles</p>
+                            <p className="text-2xl font-bold text-white">{stats.categories_available || 0}</p>
                           </div>
-                          <Clock className="w-8 h-8 text-yellow-500" />
+                          <FileText className="w-8 h-8 text-indigo-500" />
                         </div>
                       </CardContent>
                     </Card>
@@ -388,10 +518,14 @@ const CandidateProfile = () => {
                       <CardContent className="p-6">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-sm text-gray-400">Approuvées</p>
-                            <p className="text-2xl font-bold text-white">{stats.approved_candidatures}</p>
+                            <p className="text-sm text-gray-400">Taux de réussite</p>
+                            <p className="text-2xl font-bold text-white">
+                              {stats.total_candidatures > 0 
+                                ? Math.round((stats.approved_candidatures / stats.total_candidatures) * 100)
+                                : 0}%
+                            </p>
                           </div>
-                          <CheckCircle className="w-8 h-8 text-green-500" />
+                          <TrendingUp className="w-8 h-8 text-green-500" />
                         </div>
                       </CardContent>
                     </Card>
@@ -399,12 +533,87 @@ const CandidateProfile = () => {
                     <Card className="bg-gray-800/50 border-gray-700">
                       <CardContent className="p-6">
                         <div className="flex items-center justify-between">
-                          <div>
+                  <div>
                             <p className="text-sm text-gray-400">Profil complet</p>
                             <p className="text-2xl font-bold text-white">{stats.profile_completion}%</p>
                           </div>
-                          <TrendingUp className="w-8 h-8 text-purple-500" />
-                        </div>
+                          <User className="w-8 h-8 text-purple-500" />
+                  </div>
+                      </CardContent>
+                    </Card>
+                </div>
+              )}
+              
+                {/* Activité récente */}
+                {stats && (
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <Card className="bg-gray-800/50 border-gray-700">
+                      <CardHeader>
+                        <CardTitle className="text-white flex items-center gap-2">
+                          <Clock className="w-5 h-5" />
+                          Dernière activité
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-gray-300">
+                          {stats.last_activity 
+                            ? new Date(stats.last_activity).toLocaleDateString('fr-FR', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })
+                            : 'Aucune candidature'
+                          }
+                        </p>
+                        <p className="text-sm text-gray-500 mt-1">
+                          {stats.last_activity 
+                            ? 'Dernière candidature soumise'
+                            : 'Commencez par créer votre première candidature'
+                          }
+                        </p>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="bg-gray-800/50 border-gray-700">
+                      <CardHeader>
+                        <CardTitle className="text-white flex items-center gap-2">
+                          <TrendingUp className="w-5 h-5" />
+                          Performance
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">Approuvées</span>
+                            <span className="text-green-400 font-semibold">{stats.approved_candidatures}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">En attente</span>
+                            <span className="text-yellow-400 font-semibold">{stats.pending_candidatures}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">Rejetées</span>
+                            <span className="text-red-400 font-semibold">{stats.rejected_candidatures}</span>
+                </div>
+              </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="bg-gray-800/50 border-gray-700">
+                      <CardHeader>
+                        <CardTitle className="text-white flex items-center gap-2">
+                          <FileText className="w-5 h-5" />
+                          Opportunités
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-2xl font-bold text-white mb-2">{stats.categories_available || 0}</p>
+                        <p className="text-gray-300">Catégories disponibles</p>
+                        <p className="text-sm text-gray-500 mt-1">
+                          Explorez toutes les catégories pour maximiser vos chances
+                        </p>
                       </CardContent>
                     </Card>
                   </div>
@@ -414,24 +623,63 @@ const CandidateProfile = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <Card className="bg-gray-800/50 border-gray-700">
                     <CardHeader>
-                      <CardTitle className="text-white flex items-center gap-2">
-                        <User className="w-5 h-5" />
-                        Informations personnelles
+                      <CardTitle className="text-white flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <User className="w-5 h-5" />
+                          Informations personnelles
+                        </div>
+            <Button
+                          onClick={openUserModal}
+                          size="sm"
+              variant="outline"
+                          className="text-xs"
+            >
+                          <Edit3 className="w-3 h-3 mr-1" />
+                          Modifier
+            </Button>
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div className="flex items-center gap-3">
+                      {/* Photo de profil */}
+                      <div className="flex items-center gap-4 mb-6">
+                        <div className="relative">
+                          {user?.profile_picture_url || user?.profile_picture ? (
+                            <img 
+                              src={user.profile_picture_url || `http://localhost:8000/media/${user.profile_picture}`} 
+                              alt="Photo de profil" 
+                              className="w-16 h-16 rounded-full object-cover border-2 border-gray-600"
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            <div className="w-16 h-16 rounded-full bg-gray-700 border-2 border-gray-600 flex items-center justify-center">
+                              <User className="w-8 h-8 text-gray-400" />
+          </div>
+                          )}
+                        </div>
+                <div>
+                          <h3 className="text-white font-semibold text-lg">
+                            {user?.first_name} {user?.last_name}
+                          </h3>
+                          <p className="text-gray-400 text-sm">
+                            {user?.user_type === 'candidate' ? 'Candidat' : 'Administrateur'}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3">
                         <Mail className="w-4 h-4 text-gray-400" />
                         <span className="text-gray-300">{user?.email}</span>
-                      </div>
+                </div>
                       <div className="flex items-center gap-3">
                         <Phone className="w-4 h-4 text-gray-400" />
                         <span className="text-gray-300">{user?.phone || 'Non renseigné'}</span>
-                      </div>
+              </div>
                       <div className="flex items-center gap-3">
                         <MapPin className="w-4 h-4 text-gray-400" />
                         <span className="text-gray-300">{user?.country}</span>
-                      </div>
+            </div>
                       <div className="flex items-center gap-3">
                         <Calendar className="w-4 h-4 text-gray-400" />
                         <span className="text-gray-300">
@@ -450,28 +698,28 @@ const CandidateProfile = () => {
                     </CardHeader>
                     <CardContent className="space-y-4">
                       {candidate_profile?.facebook_url && (
-                        <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3">
                           <Facebook className="w-4 h-4 text-blue-500" />
                           <a href={candidate_profile.facebook_url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">
                             Facebook
                           </a>
-                        </div>
+                  </div>
                       )}
                       {candidate_profile?.instagram_url && (
-                        <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3">
                           <Instagram className="w-4 h-4 text-pink-500" />
                           <a href={candidate_profile.instagram_url} target="_blank" rel="noopener noreferrer" className="text-pink-400 hover:text-pink-300">
                             Instagram
                           </a>
-                        </div>
-                      )}
+                </div>
+              )}
                       {candidate_profile?.youtube_url && (
-                        <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3">
                           <Youtube className="w-4 h-4 text-red-500" />
                           <a href={candidate_profile.youtube_url} target="_blank" rel="noopener noreferrer" className="text-red-400 hover:text-red-300">
                             YouTube
                           </a>
-                        </div>
+                </div>
                       )}
                       {candidate_profile?.website_url && (
                         <div className="flex items-center gap-3">
@@ -479,7 +727,7 @@ const CandidateProfile = () => {
                           <a href={candidate_profile.website_url} target="_blank" rel="noopener noreferrer" className="text-green-400 hover:text-green-300">
                             Site web
                           </a>
-                        </div>
+              </div>
                       )}
                       {!candidate_profile?.facebook_url && !candidate_profile?.instagram_url && 
                        !candidate_profile?.youtube_url && !candidate_profile?.website_url && (
@@ -487,7 +735,7 @@ const CandidateProfile = () => {
                       )}
                     </CardContent>
                   </Card>
-                </div>
+            </div>
 
                 {/* Biographie */}
                 {candidate_profile?.bio && (
@@ -503,27 +751,27 @@ const CandidateProfile = () => {
                     </CardContent>
                   </Card>
                 )}
-              </motion.div>
+        </motion.div>
             )}
 
             {activeTab === 'candidatures' && (
-              <motion.div
+        <motion.div
                 key="candidatures"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 className="space-y-6"
               >
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <h2 className="text-2xl font-bold text-white">Mes candidatures</h2>
-                  <Button
+            <Button
                     onClick={() => setShowCandidatureModal(true)}
                     className="bg-blue-600 hover:bg-blue-700"
-                  >
+            >
                     <Plus className="w-4 h-4 mr-2" />
                     Nouvelle candidature
-                  </Button>
-                </div>
+            </Button>
+          </div>
 
                 {candidatures && candidatures.length > 0 ? (
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -535,7 +783,7 @@ const CandidateProfile = () => {
                             <Badge className={`${getStatusColor(candidature.status)} text-white`}>
                               {candidature.status_display}
                             </Badge>
-                          </div>
+            </div>
                         </CardHeader>
                         <CardContent className="space-y-4">
                           {candidature.description && (
@@ -546,7 +794,84 @@ const CandidateProfile = () => {
                             <Calendar className="w-4 h-4" />
                             Soumise le {new Date(candidature.submitted_at).toLocaleDateString('fr-FR')}
                           </div>
-                          
+
+                          {/* Statistiques de performance */}
+                          {candidature.status === 'approved' && (
+                            <div className="space-y-3">
+                              <div className="grid grid-cols-2 gap-4">
+                                {/* Votes reçus */}
+                                <div className="bg-gradient-to-br from-pink-500/20 to-red-500/20 rounded-lg p-3 border border-pink-500/30">
+                                  <div className="flex items-center justify-center gap-2 mb-1">
+                                    <Heart className="w-5 h-5 text-pink-400" />
+                                    <span className="text-xl font-bold text-white">
+                                      {candidature.vote_count || 0}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-pink-300 text-center">Votes reçus</p>
+                                </div>
+
+                                {/* Rang dans la catégorie */}
+                                <div className="bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-lg p-3 border border-yellow-500/30">
+                                  <div className="flex items-center justify-center gap-2 mb-1">
+                                    <Trophy className="w-5 h-5 text-yellow-400" />
+                                    <span className="text-xl font-bold text-white">
+                                      #{candidature.ranking || 'N/A'}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-yellow-300 text-center">Rang actuel</p>
+                                </div>
+                              </div>
+
+                              {/* Indicateur de performance */}
+                              {candidature.vote_count > 0 && (
+                                <div className="bg-gradient-to-r from-green-500/20 to-blue-500/20 rounded-lg p-2 border border-green-500/30">
+                                  <div className="flex items-center justify-center gap-2">
+                                    <TrendingUp className="w-4 h-4 text-green-400" />
+                                    <p className="text-sm text-green-300">
+                                      Excellente performance ! Votre candidature progresse bien
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Message pour candidatures en attente non publiées */}
+                          {candidature.status === 'pending' && !candidature.published && (
+                            <div className="py-3 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
+                              <div className="flex items-center justify-center gap-2">
+                                <Clock className="w-4 h-4 text-yellow-400" />
+                                <p className="text-sm text-yellow-300">
+                                  En attente d'approbation - Vous pouvez encore modifier votre candidature
+                                </p>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Message pour candidatures en attente publiées */}
+                          {candidature.status === 'pending' && candidature.published && (
+                            <div className="py-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+                              <div className="flex items-center justify-center gap-2">
+                                <Globe className="w-4 h-4 text-blue-400" />
+                                <p className="text-sm text-blue-300">
+                                  Publiée - Visible au public, modification non autorisée
+                                </p>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Message pour candidatures rejetées */}
+                          {candidature.status === 'rejected' && (
+                            <div className="py-3 bg-red-900/20 border border-red-500/30 rounded-lg">
+                              <div className="flex items-center justify-center gap-2">
+                                <XCircle className="w-4 h-4 text-red-400" />
+                                <p className="text-sm text-red-300">
+                                  Candidature rejetée - Non éligible aux votes
+                                </p>
+                              </div>
+                            </div>
+                          )}
+
                           {candidature.files && candidature.files.length > 0 && (
                             <div className="space-y-2">
                               <p className="text-sm text-gray-400">Fichiers joints:</p>
@@ -560,11 +885,38 @@ const CandidateProfile = () => {
                               </div>
                             </div>
                           )}
+
+                          {/* Boutons d'action */}
+                          <div className="flex justify-end gap-2 pt-2">
+                            {/* Bouton Modifier (seulement si en attente et non publiée) */}
+                            {candidature.status === 'pending' && !candidature.published && (
+                              <Button
+                                onClick={() => openEditCandidature(candidature)}
+                                variant="outline"
+                                size="sm"
+                                className="border-yellow-500 text-yellow-400 hover:bg-yellow-500/10"
+                              >
+                                <Edit3 className="w-4 h-4 mr-1" />
+                                Modifier
+                              </Button>
+                            )}
+                            
+                            {/* Bouton Détails */}
+                            <Button
+                              onClick={() => openCandidatureDetails(candidature)}
+                              variant="outline"
+                              size="sm"
+                              className="border-blue-500 text-blue-400 hover:bg-blue-500/10"
+                            >
+                              <Eye className="w-4 h-4 mr-1" />
+                              Détails
+              </Button>
+                          </div>
                         </CardContent>
                       </Card>
                     ))}
-                  </div>
-                ) : (
+            </div>
+          ) : (
                   <Card className="bg-gray-800/50 border-gray-700">
                     <CardContent className="p-12 text-center">
                       <Award className="w-16 h-16 text-gray-500 mx-auto mb-4" />
@@ -584,7 +936,7 @@ const CandidateProfile = () => {
             )}
 
             {activeTab === 'profile' && (
-              <motion.div
+                <motion.div
                 key="profile"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -599,7 +951,7 @@ const CandidateProfile = () => {
                       <CardTitle className="text-white">Informations personnelles</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div>
+                    <div>
                         <Label htmlFor="first_name" className="text-gray-300">Prénom</Label>
                         <Input
                           id="first_name"
@@ -607,7 +959,7 @@ const CandidateProfile = () => {
                           onChange={(e) => setUserForm(prev => ({ ...prev, first_name: e.target.value }))}
                           className="bg-gray-700 border-gray-600 text-white"
                         />
-                      </div>
+                    </div>
                       <div>
                         <Label htmlFor="last_name" className="text-gray-300">Nom</Label>
                         <Input
@@ -616,7 +968,7 @@ const CandidateProfile = () => {
                           onChange={(e) => setUserForm(prev => ({ ...prev, last_name: e.target.value }))}
                           className="bg-gray-700 border-gray-600 text-white"
                         />
-                      </div>
+                    </div>
                       <div>
                         <Label htmlFor="phone" className="text-gray-300">Téléphone</Label>
                         <Input
@@ -625,7 +977,7 @@ const CandidateProfile = () => {
                           onChange={(e) => setUserForm(prev => ({ ...prev, phone: e.target.value }))}
                           className="bg-gray-700 border-gray-600 text-white"
                         />
-                      </div>
+                  </div>
                       <div>
                         <Label htmlFor="country" className="text-gray-300">Pays</Label>
                         <Select value={userForm.country} onValueChange={(value) => setUserForm(prev => ({ ...prev, country: value }))}>
@@ -672,7 +1024,7 @@ const CandidateProfile = () => {
                           className="bg-gray-700 border-gray-600 text-white"
                         />
                       </div>
-                      <div>
+                <div>
                         <Label htmlFor="instagram_url" className="text-gray-300">Instagram</Label>
                         <Input
                           id="instagram_url"
@@ -681,7 +1033,7 @@ const CandidateProfile = () => {
                           placeholder="https://instagram.com/votre-profil"
                           className="bg-gray-700 border-gray-600 text-white"
                         />
-                      </div>
+                </div>
                       <div>
                         <Label htmlFor="youtube_url" className="text-gray-300">YouTube</Label>
                         <Input
@@ -691,7 +1043,7 @@ const CandidateProfile = () => {
                           placeholder="https://youtube.com/votre-chaine"
                           className="bg-gray-700 border-gray-600 text-white"
                         />
-                      </div>
+              </div>
                       <div>
                         <Label htmlFor="website_url" className="text-gray-300">Site web</Label>
                         <Input
@@ -701,22 +1053,22 @@ const CandidateProfile = () => {
                           placeholder="https://votre-site.com"
                           className="bg-gray-700 border-gray-600 text-white"
                         />
-                      </div>
+            </div>
                       <Button onClick={handleProfileUpdate} className="w-full bg-blue-600 hover:bg-blue-700">
                         <Save className="w-4 h-4 mr-2" />
                         Sauvegarder
                       </Button>
                     </CardContent>
                   </Card>
-                </div>
-              </motion.div>
+          </div>
+        </motion.div>
             )}
 
             {activeTab === 'settings' && (
-              <motion.div
+        <motion.div
                 key="settings"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 className="space-y-6"
               >
@@ -731,20 +1083,20 @@ const CandidateProfile = () => {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <p className="text-gray-300">Modifiez votre mot de passe pour sécuriser votre compte</p>
-                    <Button
+            <Button
                       onClick={() => setShowPasswordModal(true)}
                       variant="outline"
                       className="border-gray-600 text-gray-300 hover:bg-gray-700"
-                    >
+            >
                       <Shield className="w-4 h-4 mr-2" />
                       Changer le mot de passe
-                    </Button>
+            </Button>
                   </CardContent>
                 </Card>
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
+                      </div>
 
         {/* Modales */}
         {/* Modal de création de candidature */}
@@ -757,26 +1109,26 @@ const CandidateProfile = () => {
               className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
               onClick={() => setShowCandidatureModal(false)}
             >
-              <motion.div
+                <motion.div
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.9, opacity: 0 }}
                 className="bg-gray-900/95 backdrop-blur-lg border border-gray-700/50 rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex items-center justify-between mb-6">
+        >
+          <div className="flex items-center justify-between mb-6">
                   <h3 className="text-xl font-bold text-white">Nouvelle candidature</h3>
-                  <Button
+            <Button
                     onClick={() => setShowCandidatureModal(false)}
                     variant="ghost"
                     size="icon"
-                  >
+            >
                     <X className="w-4 h-4" />
-                  </Button>
-                </div>
+            </Button>
+                    </div>
 
                 <div className="space-y-6">
-                  <div>
+                    <div>
                     <Label htmlFor="category" className="text-white">Catégorie *</Label>
                     <Select 
                       value={candidatureForm.category} 
@@ -799,12 +1151,12 @@ const CandidateProfile = () => {
                                   {category.category_class.name}
                                 </Badge>
                               )}
-                            </div>
+            </div>
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
+                    </div>
 
                   <div>
                     <Label htmlFor="description" className="text-white">Description</Label>
@@ -878,12 +1230,12 @@ const CandidateProfile = () => {
                       </div>
                     </div>
                   )}
-                </div>
+                    </div>
 
                 <div className="flex justify-end gap-3 mt-6">
-                  <Button
+                    <Button
                     onClick={() => setShowCandidatureModal(false)}
-                    variant="outline"
+                      variant="outline"
                     className="border-gray-600 text-gray-300 hover:bg-gray-700"
                   >
                     Annuler
@@ -895,9 +1247,9 @@ const CandidateProfile = () => {
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     Créer la candidature
-                  </Button>
-                </div>
-              </motion.div>
+                    </Button>
+                  </div>
+                </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -905,7 +1257,7 @@ const CandidateProfile = () => {
         {/* Modal de changement de mot de passe */}
         <AnimatePresence>
           {showPasswordModal && (
-            <motion.div
+                <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -928,40 +1280,117 @@ const CandidateProfile = () => {
                   >
                     <X className="w-4 h-4" />
                   </Button>
-                </div>
+            </div>
 
                 <div className="space-y-4">
-                  <div>
+                    <div>
                     <Label htmlFor="current_password" className="text-white">Mot de passe actuel</Label>
-                    <Input
-                      id="current_password"
-                      type="password"
-                      value={passwordForm.current_password}
-                      onChange={(e) => setPasswordForm(prev => ({ ...prev, current_password: e.target.value }))}
-                      className="bg-gray-800 border-gray-600 text-white"
-                    />
-                  </div>
+                    <div className="relative">
+                      <Input
+                        id="current_password"
+                        type={showCurrentPassword ? "text" : "password"}
+                        value={passwordForm.current_password}
+                        onChange={(e) => {
+                          setPasswordForm(prev => ({ ...prev, current_password: e.target.value }));
+                          // Effacer l'erreur quand l'utilisateur tape
+                          if (passwordErrors.current_password) {
+                            setPasswordErrors(prev => ({ ...prev, current_password: '' }));
+                          }
+                        }}
+                        className={`bg-gray-800 text-white pr-10 ${
+                          passwordErrors.current_password 
+                            ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
+                            : 'border-gray-600'
+                        }`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                      >
+                        {showCurrentPassword ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
+                    {passwordErrors.current_password && (
+                      <p className="text-red-400 text-sm mt-1">{passwordErrors.current_password}</p>
+                    )}
+                    </div>
                   <div>
                     <Label htmlFor="new_password" className="text-white">Nouveau mot de passe</Label>
-                    <Input
-                      id="new_password"
-                      type="password"
-                      value={passwordForm.new_password}
-                      onChange={(e) => setPasswordForm(prev => ({ ...prev, new_password: e.target.value }))}
-                      className="bg-gray-800 border-gray-600 text-white"
-                    />
+                    <div className="relative">
+                      <Input
+                        id="new_password"
+                        type={showNewPassword ? "text" : "password"}
+                        value={passwordForm.new_password}
+                        onChange={(e) => {
+                          setPasswordForm(prev => ({ ...prev, new_password: e.target.value }));
+                          // Effacer l'erreur quand l'utilisateur tape
+                          if (passwordErrors.new_password) {
+                            setPasswordErrors(prev => ({ ...prev, new_password: '' }));
+                          }
+                        }}
+                        className={`bg-gray-800 text-white pr-10 ${
+                          passwordErrors.new_password 
+                            ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
+                            : 'border-gray-600'
+                        }`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                      >
+                        {showNewPassword ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
+                    {passwordErrors.new_password && (
+                      <p className="text-red-400 text-sm mt-1">{passwordErrors.new_password}</p>
+                    )}
                   </div>
                   <div>
                     <Label htmlFor="confirm_password" className="text-white">Confirmer le mot de passe</Label>
-                    <Input
-                      id="confirm_password"
-                      type="password"
-                      value={passwordForm.confirm_password}
-                      onChange={(e) => setPasswordForm(prev => ({ ...prev, confirm_password: e.target.value }))}
-                      className="bg-gray-800 border-gray-600 text-white"
-                    />
+                    <div className="relative">
+                      <Input
+                        id="confirm_password"
+                        type={showConfirmPassword ? "text" : "password"}
+                        value={passwordForm.confirm_password}
+                        onChange={(e) => {
+                          setPasswordForm(prev => ({ ...prev, confirm_password: e.target.value }));
+                          // Effacer l'erreur quand l'utilisateur tape
+                          if (passwordErrors.confirm_password) {
+                            setPasswordErrors(prev => ({ ...prev, confirm_password: '' }));
+                          }
+                        }}
+                        className={`bg-gray-800 text-white pr-10 ${
+                          passwordErrors.confirm_password 
+                            ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
+                            : 'border-gray-600'
+                        }`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                      >
+                        {showConfirmPassword ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
+                      </button>
+            </div>
+                    {passwordErrors.confirm_password && (
+                      <p className="text-red-400 text-sm mt-1">{passwordErrors.confirm_password}</p>
+                    )}
                   </div>
-                </div>
 
                 <div className="flex justify-end gap-3 mt-6">
                   <Button
@@ -979,9 +1408,231 @@ const CandidateProfile = () => {
                     <Shield className="w-4 h-4 mr-2" />
                     Modifier
                   </Button>
-                </div>
-              </motion.div>
+                      </div>
+                    </div>
+        </motion.div>
             </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Modal de modification des informations utilisateur */}
+        <AnimatePresence>
+          {showUserModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+              onClick={() => setShowUserModal(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="bg-gray-900/95 backdrop-blur-lg border border-gray-700/50 rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-bold text-white">Modifier les informations</h3>
+                  <Button
+                    onClick={() => setShowUserModal(false)}
+                    variant="ghost"
+                    size="icon"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+      </div>
+
+                <div className="space-y-6">
+                  {/* Photo de profil */}
+                  <div>
+                    <Label className="text-white text-sm font-medium mb-3 block">
+                      Photo de profil
+                    </Label>
+                    <div className="flex items-center gap-4">
+                      <div className="relative">
+                        {userForm.profile_picture ? (
+                          <img 
+                            src={URL.createObjectURL(userForm.profile_picture)} 
+                            alt="Photo de profil" 
+                            className="w-20 h-20 rounded-full object-cover border-2 border-gray-600"
+                          />
+                        ) : user?.profile_picture_url || user?.profile_picture ? (
+                          <img 
+                            src={user.profile_picture_url || `http://localhost:8000/media/${user.profile_picture}`} 
+                            alt="Photo de profil" 
+                            className="w-20 h-20 rounded-full object-cover border-2 border-gray-600"
+                            onError={(e) => {
+                              console.error('Erreur de chargement de l\'image:', e.target.src);
+                              e.target.style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <div className="w-20 h-20 rounded-full bg-gray-700 border-2 border-gray-600 flex items-center justify-center">
+                            <User className="w-10 h-10 text-gray-400" />
+    </div>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files[0];
+                            if (file) {
+                              setUserForm(prev => ({ ...prev, profile_picture: file }));
+                            }
+                          }}
+                          className="hidden"
+                          id="profile-picture"
+                        />
+                        <label
+                          htmlFor="profile-picture"
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg cursor-pointer transition-colors"
+                        >
+                          <Camera className="w-4 h-4" />
+                          Changer la photo
+                        </label>
+                        <p className="text-gray-400 text-xs mt-1">
+                          JPG, PNG, GIF (max 5MB)
+                      </p>
+                    </div>
+                    </div>
+                  </div>
+
+                  {/* Informations de base */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="first_name" className="text-white">Prénom *</Label>
+                      <Input
+                        id="first_name"
+                        value={userForm.first_name}
+                        onChange={(e) => {
+                          setUserForm(prev => ({ ...prev, first_name: e.target.value }));
+                          if (userErrors.first_name) {
+                            setUserErrors(prev => ({ ...prev, first_name: '' }));
+                          }
+                        }}
+                        className={`bg-gray-800 text-white mt-1 ${
+                          userErrors.first_name ? 'border-red-500' : 'border-gray-600'
+                        }`}
+                      />
+                      {userErrors.first_name && (
+                        <p className="text-red-400 text-sm mt-1">{userErrors.first_name}</p>
+                      )}
+                    </div>
+                    <div>
+                      <Label htmlFor="last_name" className="text-white">Nom *</Label>
+                      <Input
+                        id="last_name"
+                        value={userForm.last_name}
+                        onChange={(e) => {
+                          setUserForm(prev => ({ ...prev, last_name: e.target.value }));
+                          if (userErrors.last_name) {
+                            setUserErrors(prev => ({ ...prev, last_name: '' }));
+                          }
+                        }}
+                        className={`bg-gray-800 text-white mt-1 ${
+                          userErrors.last_name ? 'border-red-500' : 'border-gray-600'
+                        }`}
+                      />
+                      {userErrors.last_name && (
+                        <p className="text-red-400 text-sm mt-1">{userErrors.last_name}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="phone" className="text-white">Téléphone</Label>
+                      <Input
+                        id="phone"
+                        value={userForm.phone}
+                        onChange={(e) => {
+                          setUserForm(prev => ({ ...prev, phone: e.target.value }));
+                          if (userErrors.phone) {
+                            setUserErrors(prev => ({ ...prev, phone: '' }));
+                          }
+                        }}
+                        className={`bg-gray-800 text-white mt-1 ${
+                          userErrors.phone ? 'border-red-500' : 'border-gray-600'
+                        }`}
+                        placeholder="+224 123 456 789"
+                      />
+                      {userErrors.phone && (
+                        <p className="text-red-400 text-sm mt-1">{userErrors.phone}</p>
+                      )}
+                    </div>
+                    <div>
+                      <Label htmlFor="country" className="text-white">Pays *</Label>
+                      <Select
+                        value={userForm.country}
+                        onValueChange={(value) => {
+                          setUserForm(prev => ({ ...prev, country: value }));
+                          if (userErrors.country) {
+                            setUserErrors(prev => ({ ...prev, country: '' }));
+                          }
+                        }}
+                      >
+                        <SelectTrigger className={`bg-gray-800 text-white mt-1 ${
+                          userErrors.country ? 'border-red-500' : 'border-gray-600'
+                        }`}>
+                          <SelectValue placeholder="Sélectionner un pays" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="guinea">Guinée</SelectItem>
+                          <SelectItem value="liberia">Libéria</SelectItem>
+                          <SelectItem value="sierra_leone">Sierra Leone</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {userErrors.country && (
+                        <p className="text-red-400 text-sm mt-1">{userErrors.country}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 mt-6">
+                    <Button
+                    onClick={() => setShowUserModal(false)}
+                      variant="outline"
+                    className="border-gray-600 text-gray-300 hover:bg-gray-700"
+                  >
+                    Annuler
+                  </Button>
+                  <Button 
+                    onClick={handleUserUpdate}
+                    className="bg-blue-600 hover:bg-blue-700"
+                    disabled={!userForm.first_name || !userForm.last_name || !userForm.country}
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                    Sauvegarder
+                    </Button>
+                  </div>
+                </motion.div>
+        </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Modal des détails de candidature */}
+        <AnimatePresence>
+          {showCandidatureDetails && (
+            <CandidatureDetails
+              candidature={selectedCandidature}
+              onClose={closeCandidatureDetails}
+              onEdit={openEditCandidature}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* Modal de modification de candidature */}
+        <AnimatePresence>
+          {showEditCandidature && (
+            <EditCandidatureModal
+              candidature={editingCandidature}
+              onClose={closeEditCandidature}
+              onSuccess={handleCandidatureUpdateSuccess}
+            />
           )}
         </AnimatePresence>
       </div>

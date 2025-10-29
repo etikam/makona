@@ -52,8 +52,15 @@ const CategoriesManagement = () => {
     requires_audio: false,
     requires_documents: false,
     max_video_duration: null,
-    max_audio_duration: null
+    max_audio_duration: null,
+    awards_trophy: false,
+    awards_certificate: false,
+    awards_monetary: false
   });
+  
+  // États pour les erreurs de validation des formulaires
+  const [formErrors, setFormErrors] = useState({});
+  const [editFormErrors, setEditFormErrors] = useState({});
 
   useEffect(() => {
     loadCategories();
@@ -140,6 +147,29 @@ const CategoriesManagement = () => {
   }, [searchTerm, handleSearch]);
 
   const handleCreateCategory = async () => {
+    // Réinitialiser les erreurs
+    setFormErrors({});
+    
+    // Validation côté client
+    const errors = {};
+    
+    if (!formData.name.trim()) {
+      errors.name = "Le nom de la catégorie est obligatoire";
+    }
+    
+    if (!formData.description.trim()) {
+      errors.description = "La description est obligatoire";
+    }
+    
+    if (!formData.category_class) {
+      errors.category_class = "La classe de catégorie est obligatoire";
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+
     try {
       await categoryService.createCategory(formData);
       toast({
@@ -150,15 +180,49 @@ const CategoriesManagement = () => {
       resetForm();
       loadCategories();
     } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de créer la catégorie",
-        variant: "destructive"
-      });
+      // Gérer les erreurs de validation du serveur
+      if (error.message && error.message.includes('name')) {
+        setFormErrors({ name: 'Ce nom de catégorie existe déjà' });
+      } else if (error.message && error.message.includes('description')) {
+        setFormErrors({ description: 'La description est invalide' });
+      } else if (error.message && error.message.includes('category_class')) {
+        setFormErrors({ category_class: 'La classe de catégorie est invalide' });
+      } else {
+        toast({
+          title: "Erreur",
+          description: "Impossible de créer la catégorie",
+          variant: "destructive"
+        });
+      }
     }
   };
 
   const handleUpdateCategory = async () => {
+    if (!editingCategory) return;
+    
+    // Réinitialiser les erreurs
+    setEditFormErrors({});
+    
+    // Validation côté client
+    const errors = {};
+    
+    if (!formData.name.trim()) {
+      errors.name = "Le nom de la catégorie est obligatoire";
+    }
+    
+    if (!formData.description.trim()) {
+      errors.description = "La description est obligatoire";
+    }
+    
+    if (!formData.category_class) {
+      errors.category_class = "La classe de catégorie est obligatoire";
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      setEditFormErrors(errors);
+      return;
+    }
+
     try {
       await categoryService.updateCategory(editingCategory.id, formData);
       toast({
@@ -170,11 +234,20 @@ const CategoriesManagement = () => {
       resetForm();
       loadCategories();
     } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de mettre à jour la catégorie",
-        variant: "destructive"
-      });
+      // Gérer les erreurs de validation du serveur
+      if (error.message && error.message.includes('name')) {
+        setEditFormErrors({ name: 'Ce nom de catégorie existe déjà' });
+      } else if (error.message && error.message.includes('description')) {
+        setEditFormErrors({ description: 'La description est invalide' });
+      } else if (error.message && error.message.includes('category_class')) {
+        setEditFormErrors({ category_class: 'La classe de catégorie est invalide' });
+      } else {
+        toast({
+          title: "Erreur",
+          description: "Impossible de mettre à jour la catégorie",
+          variant: "destructive"
+        });
+      }
     }
   };
 
@@ -211,12 +284,22 @@ const CategoriesManagement = () => {
       requires_audio: false,
       requires_documents: false,
       max_video_duration: null,
-      max_audio_duration: null
+      max_audio_duration: null,
+      awards_trophy: false,
+      awards_certificate: false,
+      awards_monetary: false
     });
+  };
+
+  const openCreateModal = () => {
+    setFormErrors({});
+    resetForm();
+    setShowCreateModal(true);
   };
 
   const openEditModal = (category) => {
     setEditingCategory(category);
+    setEditFormErrors({});
     setFormData({
       category_class: category.category_class || '',
       name: category.name,
@@ -228,7 +311,10 @@ const CategoriesManagement = () => {
       requires_audio: category.requires_audio,
       requires_documents: category.requires_documents || false,
       max_video_duration: category.max_video_duration,
-      max_audio_duration: category.max_audio_duration
+      max_audio_duration: category.max_audio_duration,
+      awards_trophy: category.awards_trophy || false,
+      awards_certificate: category.awards_certificate || false,
+      awards_monetary: category.awards_monetary || false
     });
     setShowEditModal(true);
   };
@@ -302,7 +388,7 @@ const CategoriesManagement = () => {
             <p className="text-gray-400 text-sm sm:text-base">Configurez les catégories et leurs types de médias requis</p>
           </div>
           <Button
-            onClick={() => setShowCreateModal(true)}
+            onClick={openCreateModal}
             size="sm"
             className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-xs sm:text-sm font-medium"
           >
@@ -912,6 +998,67 @@ const CategoriesManagement = () => {
                         </p>
                       </motion.div>
                     )}
+
+                    {/* Configuration des prix */}
+                    <div className="mt-8 p-6 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 rounded-xl border border-yellow-500/20">
+                      <h4 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                        <Award className="w-5 h-5 text-yellow-400" />
+                        Configuration des prix
+                      </h4>
+                      <p className="text-gray-400 text-sm mb-6">
+                        Sélectionnez les types de prix qui seront attribués pour cette catégorie
+                      </p>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* Trophée */}
+                        <div className="flex items-center space-x-3 p-4 bg-gray-700/30 rounded-lg border border-gray-600 hover:border-yellow-500/50 transition-colors">
+                          <Switch
+                            id="awards_trophy"
+                            checked={formData.awards_trophy}
+                            onCheckedChange={(checked) => setFormData(prev => ({ ...prev, awards_trophy: checked }))}
+                          />
+                          <div className="flex-1">
+                            <Label htmlFor="awards_trophy" className="text-white font-medium cursor-pointer">
+                              Trophée
+                            </Label>
+                            <p className="text-gray-400 text-sm">Trophée physique</p>
+                          </div>
+                          <Award className="w-5 h-5 text-yellow-400" />
+                        </div>
+
+                        {/* Satisfecit */}
+                        <div className="flex items-center space-x-3 p-4 bg-gray-700/30 rounded-lg border border-gray-600 hover:border-blue-500/50 transition-colors">
+                          <Switch
+                            id="awards_certificate"
+                            checked={formData.awards_certificate}
+                            onCheckedChange={(checked) => setFormData(prev => ({ ...prev, awards_certificate: checked }))}
+                          />
+                          <div className="flex-1">
+                            <Label htmlFor="awards_certificate" className="text-white font-medium cursor-pointer">
+                              Satisfecit
+                            </Label>
+                            <p className="text-gray-400 text-sm">Certificat de reconnaissance</p>
+                          </div>
+                          <FileText className="w-5 h-5 text-blue-400" />
+                        </div>
+
+                        {/* Primes monétaires */}
+                        <div className="flex items-center space-x-3 p-4 bg-gray-700/30 rounded-lg border border-gray-600 hover:border-green-500/50 transition-colors">
+                          <Switch
+                            id="awards_monetary"
+                            checked={formData.awards_monetary}
+                            onCheckedChange={(checked) => setFormData(prev => ({ ...prev, awards_monetary: checked }))}
+                          />
+                          <div className="flex-1">
+                            <Label htmlFor="awards_monetary" className="text-white font-medium cursor-pointer">
+                              Primes monétaires
+                            </Label>
+                            <p className="text-gray-400 text-sm">Récompenses financières</p>
+                          </div>
+                          <TrendingUp className="w-5 h-5 text-green-400" />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
 

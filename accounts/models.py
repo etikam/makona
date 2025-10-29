@@ -49,6 +49,13 @@ class User(AbstractUser):
         default=False,
         verbose_name="Email vérifié"
     )
+    profile_picture = models.ImageField(
+        upload_to='profile_pictures/',
+        null=True,
+        blank=True,
+        verbose_name="Photo de profil",
+        help_text="Photo de profil de l'utilisateur"
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Date de création")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Date de modification")
     

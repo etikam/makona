@@ -8,7 +8,8 @@ const ResponsiveDashboardLayout = ({
   children,
   sidebarContent,
   className = "",
-  onTabChange
+  onTabChange,
+  user
 }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -52,6 +53,7 @@ const ResponsiveDashboardLayout = ({
       <CollapsibleSidebar
         isOpen={sidebarOpen}
         onToggle={toggleSidebar}
+        user={user}
       >
         {React.cloneElement(sidebarContent, { onTabChange: handleTabClick })}
       </CollapsibleSidebar>

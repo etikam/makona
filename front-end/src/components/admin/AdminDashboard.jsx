@@ -124,6 +124,7 @@ const AdminDashboard = ({ user, onLogout, onNavigate }) => {
         subtitle="Gestion complète de la plateforme Makona Awards"
         activeTab={activeTab}
         onTabChange={setActiveTab}
+        user={user}
       >
         {renderContent()}
       </AdminDashboardLayout>
