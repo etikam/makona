@@ -23,9 +23,14 @@ if (-not $networkExists) {
     Write-Host "✅ Réseau makona_network existe déjà" -ForegroundColor Green
 }
 
-# Démarrer les services
+# Démarrer Traefik
 Write-Host ""
-Write-Host "🐳 Démarrage des services Docker..." -ForegroundColor Cyan
+Write-Host "🌐 Démarrage de Traefik..." -ForegroundColor Cyan
+docker-compose -f docker-compose.traefik.yml up -d
+
+# Démarrer l'application
+Write-Host ""
+Write-Host "🐳 Démarrage de l'application..." -ForegroundColor Cyan
 docker-compose up -d --build
 
 Write-Host ""
@@ -40,6 +45,7 @@ Write-Host "📝 Logs (pour voir les logs en temps réel):" -ForegroundColor Cya
 Write-Host "   docker-compose logs -f"
 Write-Host ""
 Write-Host "🌐 Accès:" -ForegroundColor Cyan
-Write-Host "   Frontend: https://makona-awards.n-it.org"
-Write-Host "   API: https://atyapimakona.n-it.org"
+Write-Host "   Frontend: http://localhost"
+Write-Host "   API: http://localhost/api"
+Write-Host "   Dashboard Traefik: http://localhost:8080"
 Write-Host ""

@@ -45,9 +45,8 @@ services:
       - makona_network
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.backend.rule=Host(`${API_DOMAIN}`)"
-      - "traefik.http.routers.backend.entrypoints=websecure"
-      - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.backend.rule=Host(`${API_DOMAIN:-localhost}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.backend.entrypoints=web"
       - "traefik.http.services.backend.loadbalancer.server.port=8000"
 
   # Frontend React
@@ -61,39 +60,10 @@ services:
       - makona_network
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.frontend.rule=Host(`${FRONTEND_DOMAIN}`)"
-      - "traefik.http.routers.frontend.entrypoints=websecure"
-      - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.frontend.rule=Host(`${FRONTEND_DOMAIN:-localhost}`) && !PathPrefix(`/api`)"
+      - "traefik.http.routers.frontend.entrypoints=web"
       - "traefik.http.services.frontend.loadbalancer.server.port=3000"
 
-  # Reverse Proxy Traefik
-  traefik:
-    image: traefik:v3.0
-    container_name: makona_traefik
-    restart: unless-stopped
-    command:
-      - "--api.dashboard=true"
-      - "--api.insecure=false"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.websecure.address=:443"
-      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
-      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
-      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
-      - "--log.level=INFO"
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - traefik_data:/letsencrypt
-    networks:
-      - makona_network
-    environment:
-      - FRONTEND_DOMAIN=${FRONTEND_DOMAIN}
-      - API_DOMAIN=${API_DOMAIN}
-      - ACME_EMAIL=${ACME_EMAIL}
 
 volumes:
   postgres_data:
@@ -104,9 +74,8 @@ volumes:
     driver: local
   logs_volume:
     driver: local
-  traefik_data:
-    driver: local
 
 networks:
   makona_network:
     driver: bridge
+    external: true

@@ -26,9 +26,14 @@ if errorlevel 1 (
     echo ✅ Réseau makona_network existe déjà
 )
 
-REM Démarrer les services
+REM Démarrer Traefik
 echo.
-echo 🐳 Démarrage des services Docker...
+echo 🌐 Démarrage de Traefik...
+docker-compose -f docker-compose.traefik.yml up -d
+
+REM Démarrer l'application
+echo.
+echo 🐳 Démarrage de l'application...
 docker-compose up -d --build
 
 echo.
@@ -42,7 +47,8 @@ echo 📝 Logs (pour voir les logs en temps réel):
 echo    docker-compose logs -f
 echo.
 echo 🌐 Accès:
-echo    Frontend: https://makona-awards.n-it.org
-echo    API: https://atyapimakona.n-it.org
+echo    Frontend: http://localhost
+echo    API: http://localhost/api
+echo    Dashboard Traefik: http://localhost:8080
 echo.
 pause

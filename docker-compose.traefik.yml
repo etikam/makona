@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  # Reverse Proxy Traefik - Service indépendant
+  traefik:
+    image: traefik:v3.0
+    container_name: makona_traefik
+    restart: unless-stopped
+    command:
+      - "--api.dashboard=true"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--log.level=INFO"
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - makona_network
+    environment:
+      - FRONTEND_DOMAIN=${FRONTEND_DOMAIN:-localhost}
+      - API_DOMAIN=${API_DOMAIN:-localhost}
+
+networks:
+  makona_network:
+    driver: bridge
+    external: false

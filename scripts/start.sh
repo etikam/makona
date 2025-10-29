@@ -25,9 +25,14 @@ else
     echo "✅ Réseau makona_network existe déjà"
 fi
 
-# Démarrer les services
+# Démarrer Traefik
 echo ""
-echo "🐳 Démarrage des services Docker..."
+echo "🌐 Démarrage de Traefik..."
+docker-compose -f docker-compose.traefik.yml up -d
+
+# Démarrer l'application
+echo ""
+echo "🐳 Démarrage de l'application..."
 docker-compose up -d --build
 
 echo ""
@@ -41,6 +46,7 @@ echo "📝 Logs (pour voir les logs en temps réel):"
 echo "   docker-compose logs -f"
 echo ""
 echo "🌐 Accès:"
-echo "   Frontend: https://makona-awards.n-it.org"
-echo "   API: https://atyapimakona.n-it.org"
+echo "   Frontend: http://localhost"
+echo "   API: http://localhost/api"
+echo "   Dashboard Traefik: http://localhost:8080"
 echo ""

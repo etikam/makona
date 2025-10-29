@@ -3,7 +3,7 @@ set -e
 
 # Attendre que la base de données soit prête
 echo "Attente de la base de données..."
-python manage.py wait_for_db
+python docker/wait_for_db.py
 
 # Collecter les fichiers statiques
 echo "Collection des fichiers statiques..."
