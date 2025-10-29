@@ -13,9 +13,6 @@ RUN npm ci
 # Copier le code source
 COPY front-end/ .
 
-# Vérifier que les fichiers sont bien copiés
-RUN ls -la src/lib/ && cat src/lib/utils.js
-
 # Construire l'application
 RUN npm run build
 
