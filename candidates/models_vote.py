@@ -24,6 +24,7 @@ class Vote(models.Model):
         related_name='votes_given',
         verbose_name="Votant"
     )
+    
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name="Date de vote"

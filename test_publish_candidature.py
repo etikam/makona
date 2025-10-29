@@ -38,3 +38,4 @@ def test_publish_candidature():
 
 if __name__ == '__main__':
     test_publish_candidature()
+

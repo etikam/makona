@@ -63,3 +63,4 @@ def test_candidature_data():
 
 if __name__ == '__main__':
     test_candidature_data()
+

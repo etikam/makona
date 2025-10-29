@@ -102,3 +102,4 @@ def test_final_admin_candidatures():
 
 if __name__ == '__main__':
     test_final_admin_candidatures()
+

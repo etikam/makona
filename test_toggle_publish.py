@@ -88,3 +88,4 @@ def test_toggle_publish():
 
 if __name__ == '__main__':
     test_toggle_publish()
+

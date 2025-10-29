@@ -100,3 +100,4 @@ def test_complete_admin_candidatures():
 
 if __name__ == '__main__':
     test_complete_admin_candidatures()
+

@@ -111,3 +111,4 @@ def test_final_admin_candidature():
 
 if __name__ == '__main__':
     test_final_admin_candidature()
+
