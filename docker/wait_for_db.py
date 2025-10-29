@@ -8,6 +8,8 @@ import django
 from django.db import connections
 from django.db.utils import OperationalError
 
+# Ajouter le répertoire parent au path Python
+sys.path.append('/app')
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
 

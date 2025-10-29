@@ -20,6 +20,9 @@ RUN apt-get update && apt-get install -y \
 # Définir le répertoire de travail
 WORKDIR /app
 
+# Ajouter le répertoire courant au PYTHONPATH
+ENV PYTHONPATH=/app
+
 # Copier et installer les dépendances Python
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
