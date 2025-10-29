@@ -13,6 +13,27 @@ RUN npm ci
 # Copier le code source
 COPY front-end/ .
 
+# Debug: Vérifier la structure des fichiers
+RUN echo "=== Structure du répertoire src ===" && \
+    find src -type f -name "*.js" | head -20 && \
+    echo "=== Contenu du dossier lib ===" && \
+    ls -la src/lib/ && \
+    echo "=== Vérification du fichier utils.js ===" && \
+    test -f src/lib/utils.js && echo "Fichier utils.js trouvé" || echo "Fichier utils.js NON TROUVÉ" && \
+    echo "=== Contenu du fichier utils.js ===" && \
+    cat src/lib/utils.js
+
+# Créer le fichier utils.js s'il n'existe pas
+RUN mkdir -p src/lib && \
+    echo 'import { clsx } from "clsx"' > src/lib/utils.js && \
+    echo 'import { twMerge } from "tailwind-merge"' >> src/lib/utils.js && \
+    echo '' >> src/lib/utils.js && \
+    echo 'export function cn(...inputs) {' >> src/lib/utils.js && \
+    echo '  return twMerge(clsx(inputs))' >> src/lib/utils.js && \
+    echo '}' >> src/lib/utils.js && \
+    echo "=== Fichier utils.js créé ===" && \
+    cat src/lib/utils.js
+
 # Construire l'application
 RUN npm run build
 
