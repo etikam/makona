@@ -1,9 +1,6 @@
 # Dockerfile pour le frontend React/Vite - Makona Awards 2025
 FROM node:18-alpine AS builder
 
-# Variables d'environnement
-ENV NODE_ENV=production
-
 # Définir le répertoire de travail
 WORKDIR /app
 
@@ -11,13 +8,13 @@ WORKDIR /app
 COPY front-end/package*.json ./
 
 # Installer toutes les dépendances (dev + prod) pour le build
-RUN npm ci --silent
+RUN npm ci
 
 # Copier le code source
 COPY front-end/ .
 
 # Construire l'application
-RUN npx vite build
+RUN npm run build
 
 # Stage de production avec serveur HTTP simple
 FROM node:18-alpine
