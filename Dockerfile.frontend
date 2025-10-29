@@ -17,7 +17,7 @@ RUN npm ci --silent
 COPY front-end/ .
 
 # Construire l'application
-RUN npm run build
+RUN npx vite build
 
 # Stage de production avec serveur HTTP simple
 FROM node:18-alpine
