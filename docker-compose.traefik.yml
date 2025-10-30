@@ -1,5 +1,4 @@
 version: '3.8'
-name: makona-proxy
 
 services:
   # Reverse Proxy Traefik - Service indépendant (Production)
