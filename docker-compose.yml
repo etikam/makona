@@ -45,7 +45,8 @@ services:
       - makona_network
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.backend.rule=Host(`${API_DOMAIN:-localhost}`) && PathPrefix(`/api`)"
+      # Router unique: tout le trafic du domaine API est envoyé à Django
+      - "traefik.http.routers.backend.rule=Host(`${API_DOMAIN:-localhost}`)"
       - "traefik.http.routers.backend.entrypoints=web,websecure"
       - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
       - "traefik.http.services.backend.loadbalancer.server.port=8000"
