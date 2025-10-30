@@ -1,4 +1,5 @@
 version: '3.8'
+name: makona-proxy
 
 services:
   # Reverse Proxy Traefik - Service indépendant (Production)
@@ -41,8 +42,10 @@ services:
 
 volumes:
   traefik_data_prod:
+    name: makona_traefik_letsencrypt
     driver: local
   traefik_logs_prod:
+    name: makona_traefik_logs
     driver: local
 
 networks:

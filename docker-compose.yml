@@ -1,4 +1,5 @@
 version: '3.8'
+name: makona-app
 
 services:
   # Base de données PostgreSQL
@@ -72,12 +73,16 @@ services:
 
 volumes:
   postgres_data:
+    name: makona_postgres_data
     driver: local
   media_volume:
+    name: makona_media
     driver: local
   static_volume:
+    name: makona_static
     driver: local
   logs_volume:
+    name: makona_logs
     driver: local
 
 networks:
