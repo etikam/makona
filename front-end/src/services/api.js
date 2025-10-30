@@ -3,7 +3,9 @@
  * Gère tous les appels vers le backend Django REST Framework
  */
 
-const API_BASE_URL = 'http://localhost:8000/api';
+// Base URL configurable via Vite env var at build time
+// Example: VITE_API_BASE_URL=https://atyapimakona.n-it.org/api
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 class ApiService {
   constructor() {

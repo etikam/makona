@@ -13,6 +13,10 @@ RUN npm ci
 # Copier le code source
 COPY front-end/ .
 
+# Passer l'URL d'API au build Vite (utilise les variables VITE_*)
+ARG VITE_API_BASE_URL
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
+
 # Créer le dossier lib et le fichier utils.js
 RUN mkdir -p src/lib && \
     echo 'import { clsx } from "clsx"' > src/lib/utils.js && \
