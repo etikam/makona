@@ -93,7 +93,8 @@ class CandidatureSerializer(serializers.ModelSerializer):
     reviewed_by_name = serializers.CharField(source='reviewed_by.get_full_name', read_only=True)
     files = CandidatureFileSerializer(many=True, read_only=True)
     status_color = serializers.CharField(source='get_status_display_color', read_only=True)
-    can_be_modified = serializers.BooleanField(source='can_be_modified', read_only=True)
+    # "source" est redondant quand il est identique au nom du champ
+    can_be_modified = serializers.BooleanField(read_only=True)
     
     class Meta:
         model = Candidature
