@@ -178,7 +178,7 @@ SESSION_COOKIE_SAMESITE = 'Lax'
 
 # CORS Settings
 # CORS allowed origins (override with env in production)
-CORS_ALLOWED_ORIGINS = config(
+_CORS_ALLOWED = config(
     'CORS_ALLOWED_ORIGINS',
     default="http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173"
 ).split(',')
@@ -187,10 +187,29 @@ CORS_ALLOW_CREDENTIALS = True
 
 # CSRF Trusted Origins (pour l'authentification par sessions)
 # CSRF trusted origins (for session auth) - override with env in production
-CSRF_TRUSTED_ORIGINS = config(
+_CSRF_TRUSTED = config(
     'CSRF_TRUSTED_ORIGINS',
     default="http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173"
 ).split(',')
+
+# Optionally enrich CORS/CSRF from domain envs
+FRONTEND_DOMAIN = config('FRONTEND_DOMAIN', default=None)
+API_DOMAIN = config('API_DOMAIN', default=None)
+
+def _maybe_https(domain: str | None) -> list[str]:
+    if not domain:
+        return []
+    return [f"https://{domain}", f"http://{domain}"]
+
+CORS_ALLOWED_ORIGINS = sorted(set(_CORS_ALLOWED + _maybe_https(FRONTEND_DOMAIN)))
+CSRF_TRUSTED_ORIGINS = sorted(set(_CSRF_TRUSTED + _maybe_https(FRONTEND_DOMAIN) + _maybe_https(API_DOMAIN)))
+
+# Let Django know it's behind Traefik/Proxy using HTTPS
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# Secure cookies in production
+CSRF_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_SECURE = not DEBUG
 
 # Spectacular Settings (API Documentation)
 SPECTACULAR_SETTINGS = {
