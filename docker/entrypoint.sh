@@ -19,8 +19,16 @@ python manage.py shell -c "
 from django.contrib.auth import get_user_model
 User = get_user_model()
 if not User.objects.filter(is_superuser=True).exists():
-    User.objects.create_superuser('admin', 'admin@makonaawards.com', 'admin123')
-    print('Superutilisateur créé: admin/admin123')
+    u = User.objects.create_superuser('admin', 'admin@makonaawards.com', 'admin123')
+    # S'assurer que le superuser est bien taggé comme admin applicatif
+    try:
+        u.user_type = 'admin'
+        if not u.country:
+            u.country = 'guinea'
+        u.save(update_fields=['user_type', 'country'])
+    except Exception as e:
+        print(f'Warning: unable to set user_type/country on superuser: {e}')
+    print('Superutilisateur créé: admin/admin123 (type: admin)')
 else:
     print('Superutilisateur existe déjà')
 "
