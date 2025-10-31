@@ -18,13 +18,23 @@ adjust_permissions() {
     fi
 }
 
+# Construire DATABASE_URL si elle n'est pas définie (avant le passage à django)
+if [ -z "$DATABASE_URL" ]; then
+    echo "Construction de DATABASE_URL..."
+    export DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}"
+    echo "DATABASE_URL construite: postgresql://${POSTGRES_USER}:***@db:5432/${POSTGRES_DB}"
+fi
+
 # Si on est root, ajuster les permissions puis passer à django
 if [ "$(id -u)" = '0' ]; then
     adjust_permissions
-    exec gosu django "$0" "$@"
+    # Préserver DATABASE_URL et autres variables d'environnement lors du passage à django
+    export DATABASE_URL
+    exec gosu django env DATABASE_URL="$DATABASE_URL" "$0" "$@"
 fi
 
 # À partir d'ici, on est l'utilisateur django
+
 # Attendre que la base de données soit prête
 echo "Attente de la base de données..."
 python docker/wait_for_db.py
