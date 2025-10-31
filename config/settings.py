@@ -215,6 +215,33 @@ def _maybe_https(domain: str | None) -> list[str]:
     return [f"https://{domain}", f"http://{domain}"]
 
 CORS_ALLOWED_ORIGINS = sorted(set(_CORS_ALLOWED + _maybe_https(FRONTEND_DOMAIN)))
+
+# CORS Headers - autoriser les headers nécessaires pour les requêtes authentifiées
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
+# CORS Methods - autoriser toutes les méthodes HTTP nécessaires
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+# Preflight cache duration (24 heures)
+CORS_PREFLIGHT_MAX_AGE = 86400
+
 CSRF_TRUSTED_ORIGINS = sorted(set(_CSRF_TRUSTED + _maybe_https(FRONTEND_DOMAIN) + _maybe_https(API_DOMAIN)))
 
 # Let Django know it's behind Traefik/Proxy using HTTPS
