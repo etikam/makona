@@ -21,7 +21,7 @@ adjust_permissions() {
 # Si on est root, ajuster les permissions puis passer à django
 if [ "$(id -u)" = '0' ]; then
     adjust_permissions
-    exec su-exec django "$0" "$@"
+    exec gosu django "$0" "$@"
 fi
 
 # À partir d'ici, on est l'utilisateur django

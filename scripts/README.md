@@ -2,24 +2,52 @@
 
 ## Scripts disponibles
 
-### Windows
+### Scripts de démarrage
 
-#### Option 1: PowerShell (Recommandé)
+#### Windows - PowerShell (Recommandé)
 ```powershell
 .\scripts\start.ps1
 ```
 
-#### Option 2: Batch
+#### Windows - Batch
 ```cmd
 scripts\start.bat
 ```
 
-### Linux/Mac
-
+#### Linux/Mac
 ```bash
 chmod +x scripts/start.sh
 ./scripts/start.sh
 ```
+
+### Scripts de nettoyage
+
+⚠️ **ATTENTION** : Ces scripts suppriment **TOUS** les conteneurs, images et volumes du projet !
+
+#### Windows - PowerShell
+```powershell
+.\scripts\clean.ps1
+```
+
+#### Windows - Batch
+```cmd
+scripts\clean.bat
+```
+
+#### Linux/Mac
+```bash
+chmod +x scripts/clean.sh
+./scripts/clean.sh
+```
+
+Le script de nettoyage :
+1. ✅ Arrête tous les conteneurs
+2. ✅ Supprime les conteneurs orphelins
+3. ✅ Supprime les images du projet
+4. ✅ Supprime les volumes de données
+5. ✅ Relance automatiquement l'application avec `start.sh`
+
+**Note** : Le réseau Docker `makona_network` est préservé.
 
 ## Fonctionnalités
 
@@ -53,14 +81,23 @@ Le script de premier lancement :
 
 3. **Vérifier le statut** :
    ```bash
-   docker-compose ps
+   # Application
+   docker-compose -p app ps
+   
+   # Traefik
+   docker-compose -f docker-compose.traefik.yml -p traefik ps
    ```
 
 ### Lancements suivants
 
-Pour les lancements suivants, vous pouvez utiliser directement :
+Pour les lancements suivants, utilisez les commandes avec les noms de projet :
+
 ```bash
-docker-compose up -d
+# Démarrer Traefik
+docker-compose -f docker-compose.traefik.yml -p traefik up -d
+
+# Démarrer l'application
+docker-compose -p app up -d
 ```
 
 ## Variables à configurer dans .env
@@ -79,16 +116,49 @@ docker-compose up -d
 
 ## Commandes utiles
 
+### Application (projet `app`)
+
 ```bash
 # Voir les logs
-docker-compose logs -f
+docker-compose -p app logs -f
+
+# Voir les logs d'un service spécifique
+docker-compose -p app logs -f backend
+docker-compose -p app logs -f frontend
+docker-compose -p app logs -f db
 
 # Redémarrer un service
-docker-compose restart backend
+docker-compose -p app restart backend
 
 # Arrêter tous les services
-docker-compose down
+docker-compose -p app down
 
 # Rebuild et redémarrer
-docker-compose up -d --build
+docker-compose -p app up -d --build
 ```
+
+### Traefik (projet `traefik`)
+
+```bash
+# Voir les logs
+docker-compose -f docker-compose.traefik.yml -p traefik logs -f
+
+# Redémarrer Traefik
+docker-compose -f docker-compose.traefik.yml -p traefik restart
+
+# Arrêter Traefik
+docker-compose -f docker-compose.traefik.yml -p traefik down
+```
+
+## Documentation complète
+
+Pour une documentation complète de toutes les commandes Docker disponibles, consultez :
+
+📖 **[DOCKER_COMMANDS.md](./DOCKER_COMMANDS.md)**
+
+Ce guide contient :
+- ✅ Toutes les commandes de gestion des conteneurs
+- ✅ Commandes de logs et debugging
+- ✅ Gestion des volumes et sauvegardes
+- ✅ Commandes d'urgence
+- ✅ Workflow typique
