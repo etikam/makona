@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y \
     --no-install-recommends \
     build-essential \
     libpq-dev \
+    su-exec \
     && rm -rf /var/lib/apt/lists/*
 
 # Définir le répertoire de travail
@@ -34,17 +35,14 @@ COPY . .
 RUN mkdir -p /app/staticfiles /app/media /app/logs && \
     chown -R django:django /app
 
-# Changer vers l'utilisateur non-root
-USER django
-
 # Exposer le port
 EXPOSE 8000
 
-# Script de démarrage
+# Script de démarrage (s'exécute en root pour ajuster les permissions)
 COPY docker/entrypoint.sh /entrypoint.sh
-USER root
 RUN chmod +x /entrypoint.sh
-USER django
+# L'entrypoint changera vers l'utilisateur django après avoir ajusté les permissions
+# Ne pas définir USER ici - l'entrypoint gérera le changement d'utilisateur
 
 # Point d'entrée
 ENTRYPOINT ["/entrypoint.sh"]

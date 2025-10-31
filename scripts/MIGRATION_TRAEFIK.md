@@ -58,43 +58,46 @@ Si vous préférez faire la migration manuellement :
 docker volume ls | grep makona
 
 # 2. Arrêter les conteneurs existants
-docker-compose down
+docker-compose -p app down
 
-# 3. Démarrer Traefik avec suppression des orphelins
-docker-compose -f docker-compose.traefik.yml up -d --remove-orphans
+# 3. Démarrer Traefik avec un nom de projet séparé
+docker-compose -f docker-compose.traefik.yml -p traefik up -d
 
 # 4. Redémarrer les services applicatifs
-docker-compose up -d
+docker-compose -p app up -d
 
 # 5. Vérifier que tout fonctionne
-docker-compose ps
+docker-compose -p app ps
+docker-compose -f docker-compose.traefik.yml -p traefik ps
 docker volume ls | grep makona
 ```
 
-## ⚠️ Avertissement sur "makona_traefik_prod"
+## ✅ Solution : Noms de projet séparés
 
-**C'est normal** si vous voyez cet avertissement lors du démarrage des services applicatifs :
+Pour éviter les avertissements d'orchestrés, l'architecture utilise **des noms de projet distincts** :
 
+- **Projet Traefik** : `traefik` (via `-p traefik`)
+- **Projet Application** : `app` (via `-p app`)
+
+### Utilisation
+
+```bash
+# Démarrer Traefik
+docker-compose -f docker-compose.traefik.yml -p traefik up -d
+
+# Démarrer l'application
+docker-compose -p app up -d
+
+# Voir le statut
+docker-compose -p app ps
+docker-compose -f docker-compose.traefik.yml -p traefik ps
+
+# Arrêter
+docker-compose -p app down
+docker-compose -f docker-compose.traefik.yml -p traefik down
 ```
-WARNING: Found orphan containers (makona_traefik_prod) for this project.
-```
 
-### Pourquoi cet avertissement ?
-
-L'architecture utilise **deux fichiers compose différents** :
-- `docker-compose.traefik.yml` : Gère uniquement Traefik
-- `docker-compose.yml` : Gère les services applicatifs (backend, frontend, db)
-
-Quand vous utilisez `docker-compose up -d` (avec `docker-compose.yml`), Docker détecte `makona_traefik_prod` qui a été créé avec l'autre fichier compose et le considère comme "orphelin" dans ce contexte.
-
-**Cet avertissement est inoffensif** et n'affecte pas le fonctionnement. Traefik continue de fonctionner normalement car :
-1. Il est géré séparément par `docker-compose.traefik.yml`
-2. Il est déjà en cours d'exécution
-3. Les services applicatifs se connectent correctement à Traefik via le réseau Docker
-
-### Ignorer l'avertissement
-
-Vous pouvez ignorer cet avertissement en toute sécurité. Il n'indique aucun problème.
+Cette séparation garantit que Docker Compose ne considère pas les conteneurs d'un projet comme des "orphelins" dans l'autre projet.
 
 ## Vérification post-migration
 
@@ -107,14 +110,16 @@ Après la migration, vérifiez que :
 
 ```bash
 # Vérifier les conteneurs
-docker-compose ps
+docker-compose -p app ps
+docker-compose -f docker-compose.traefik.yml -p traefik ps
 
 # Vérifier les volumes
 docker volume ls | grep makona
 
 # Vérifier les logs
-docker-compose logs backend
-docker-compose logs db
+docker-compose -p app logs backend
+docker-compose -p app logs db
+docker-compose -f docker-compose.traefik.yml -p traefik logs
 ```
 
 ## En cas de problème

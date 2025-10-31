@@ -1,6 +1,30 @@
 #!/bin/bash
 set -e
 
+# Fonction pour ajuster les permissions (à exécuter en root)
+adjust_permissions() {
+    echo "Vérification des permissions des volumes..."
+    if [ -d "/app/media" ]; then
+        chown -R django:django /app/media
+        chmod -R 755 /app/media
+    fi
+    if [ -d "/app/staticfiles" ]; then
+        chown -R django:django /app/staticfiles
+        chmod -R 755 /app/staticfiles
+    fi
+    if [ -d "/app/logs" ]; then
+        chown -R django:django /app/logs
+        chmod -R 755 /app/logs
+    fi
+}
+
+# Si on est root, ajuster les permissions puis passer à django
+if [ "$(id -u)" = '0' ]; then
+    adjust_permissions
+    exec su-exec django "$0" "$@"
+fi
+
+# À partir d'ici, on est l'utilisateur django
 # Attendre que la base de données soit prête
 echo "Attente de la base de données..."
 python docker/wait_for_db.py

@@ -23,26 +23,31 @@ if (-not $networkExists) {
     Write-Host "✅ Réseau makona_network existe déjà" -ForegroundColor Green
 }
 
-# Démarrer Traefik
+# Démarrer Traefik avec un nom de projet séparé
 Write-Host ""
 Write-Host "🌐 Démarrage de Traefik..." -ForegroundColor Cyan
-docker-compose -f docker-compose.traefik.yml up -d
+docker-compose -f docker-compose.traefik.yml -p traefik up -d
 
-# Démarrer l'application
+# Démarrer l'application avec un nom de projet spécifique
 Write-Host ""
 Write-Host "🐳 Démarrage de l'application..." -ForegroundColor Cyan
-docker-compose up -d --build
+docker-compose -p app up -d --build
 
 Write-Host ""
 Write-Host "✅ Configuration terminée!" -ForegroundColor Green
 Write-Host ""
 
 Write-Host "📊 Statut des services:" -ForegroundColor Cyan
-docker-compose ps
+Write-Host "Application:" -ForegroundColor Yellow
+docker-compose -p app ps
+Write-Host ""
+Write-Host "Traefik:" -ForegroundColor Yellow
+docker-compose -f docker-compose.traefik.yml -p traefik ps
 
 Write-Host ""
 Write-Host "📝 Logs (pour voir les logs en temps réel):" -ForegroundColor Cyan
-Write-Host "   docker-compose logs -f"
+Write-Host "   Application: docker-compose -p app logs -f"
+Write-Host "   Traefik: docker-compose -f docker-compose.traefik.yml -p traefik logs -f"
 Write-Host ""
 Write-Host "🌐 Accès:" -ForegroundColor Cyan
 Write-Host "   Frontend: http://localhost"

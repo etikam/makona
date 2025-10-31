@@ -47,7 +47,7 @@ fi
 
 # Sauvegarder l'état actuel des conteneurs
 echo "📸 État actuel des conteneurs:"
-docker-compose ps 2>/dev/null || docker ps --filter "name=makona_" --format "table {{.Names}}\t{{.Status}}"
+docker-compose -p app ps 2>/dev/null || docker ps --filter "name=makona_" --format "table {{.Names}}\t{{.Status}}"
 
 echo ""
 read -p "Appuyez sur Entrée pour continuer avec la migration..."
@@ -55,7 +55,7 @@ read -p "Appuyez sur Entrée pour continuer avec la migration..."
 # Arrêter proprement les conteneurs existants
 echo ""
 echo "🛑 Arrêt des conteneurs existants..."
-docker-compose down 2>/dev/null || true
+docker-compose -p app down 2>/dev/null || true
 
 # Si docker-compose down ne fonctionne pas, arrêter manuellement
 for container in makona_backend makona_frontend makona_db; do
@@ -74,11 +74,10 @@ for volume in "${VOLUMES[@]}"; do
     fi
 done
 
-# Supprimer les conteneurs orphelins (CELA NE SUPPRIME PAS LES VOLUMES)
+# Démarrer Traefik avec un nom de projet séparé
 echo ""
-echo "🧹 Suppression des conteneurs orphelins..."
-echo "   ⚠️  Note: Les volumes de données sont préservés automatiquement"
-docker-compose -f docker-compose.traefik.yml up -d --remove-orphans
+echo "🌐 Démarrage de Traefik..."
+docker-compose -f docker-compose.traefik.yml -p traefik up -d
 
 # Attendre un peu pour que Traefik démarre
 sleep 2
@@ -86,15 +85,17 @@ sleep 2
 # Démarrer les services avec docker-compose.yml (qui utilise Traefik)
 echo ""
 echo "🚀 Démarrage des services applicatifs..."
-echo "   ℹ️  Note: L'avertissement sur 'makona_traefik_prod' est normal et inoffensif"
-echo "      (Traefik est géré séparément par docker-compose.traefik.yml)"
-docker-compose up -d
+docker-compose -p app up -d
 
 echo ""
 echo -e "${GREEN}✅ Migration terminée avec succès!${NC}"
 echo ""
 echo "📊 Statut des services:"
-docker-compose ps
+echo "Application:"
+docker-compose -p app ps
+echo ""
+echo "Traefik:"
+docker-compose -f docker-compose.traefik.yml -p traefik ps
 
 echo ""
 echo "🔍 Vérification finale des volumes:"
@@ -108,6 +109,7 @@ done
 
 echo ""
 echo "📝 Pour voir les logs:"
-echo "   docker-compose logs -f"
+echo "   Application: docker-compose -p app logs -f"
+echo "   Traefik: docker-compose -f docker-compose.traefik.yml -p traefik logs -f"
 echo ""
 
