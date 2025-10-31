@@ -60,40 +60,41 @@ docker volume ls | grep makona
 # 2. Arrêter les conteneurs existants
 docker-compose down
 
-# 3. Démarrer Traefik avec nom de projet séparé (évite les avertissements)
-docker-compose -p makona-traefik -f docker-compose.traefik.yml up -d
+# 3. Démarrer Traefik avec suppression des orphelins
+docker-compose -f docker-compose.traefik.yml up -d --remove-orphans
 
-# 4. Redémarrer les services applicatifs avec nom de projet séparé
-docker-compose -p makona-app up -d
+# 4. Redémarrer les services applicatifs
+docker-compose up -d
 
 # 5. Vérifier que tout fonctionne
-docker-compose -p makona-traefik -f docker-compose.traefik.yml ps
-docker-compose -p makona-app ps
+docker-compose ps
 docker volume ls | grep makona
 ```
 
-## ✅ Solution finale : Noms de projets séparés
+## ⚠️ Avertissement sur "makona_traefik_prod"
 
-**Cette migration configure des noms de projets différents** pour éliminer complètement les avertissements :
+**C'est normal** si vous voyez cet avertissement lors du démarrage des services applicatifs :
 
-- **Projet Traefik** : `makona-traefik` → `docker-compose -p makona-traefik -f docker-compose.traefik.yml`
-- **Projet Application** : `makona-app` → `docker-compose -p makona-app`
-
-Avec cette configuration, **aucun avertissement d'orphelins n'apparaît** car Docker Compose sépare complètement les deux projets.
-
-### Utilisation après migration
-
-```bash
-# Démarrer Traefik
-docker-compose -p makona-traefik -f docker-compose.traefik.yml up -d
-
-# Démarrer l'application
-docker-compose -p makona-app up -d
-
-# Aucun avertissement ! ✅
+```
+WARNING: Found orphan containers (makona_traefik_prod) for this project.
 ```
 
-Voir le guide complet d'utilisation : `scripts/DOCKER_COMPOSE_USAGE.md`
+### Pourquoi cet avertissement ?
+
+L'architecture utilise **deux fichiers compose différents** :
+- `docker-compose.traefik.yml` : Gère uniquement Traefik
+- `docker-compose.yml` : Gère les services applicatifs (backend, frontend, db)
+
+Quand vous utilisez `docker-compose up -d` (avec `docker-compose.yml`), Docker détecte `makona_traefik_prod` qui a été créé avec l'autre fichier compose et le considère comme "orphelin" dans ce contexte.
+
+**Cet avertissement est inoffensif** et n'affecte pas le fonctionnement. Traefik continue de fonctionner normalement car :
+1. Il est géré séparément par `docker-compose.traefik.yml`
+2. Il est déjà en cours d'exécution
+3. Les services applicatifs se connectent correctement à Traefik via le réseau Docker
+
+### Ignorer l'avertissement
+
+Vous pouvez ignorer cet avertissement en toute sécurité. Il n'indique aucun problème.
 
 ## Vérification post-migration
 

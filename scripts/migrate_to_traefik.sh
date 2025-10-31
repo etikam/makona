@@ -47,20 +47,15 @@ fi
 
 # Sauvegarder l'état actuel des conteneurs
 echo "📸 État actuel des conteneurs:"
-echo "   Application:"
-docker-compose -p makona-app ps 2>/dev/null || docker ps --filter "name=makona_" --format "table {{.Names}}\t{{.Status}}"
-echo ""
-echo "   Traefik:"
-docker-compose -p makona-traefik -f docker-compose.traefik.yml ps 2>/dev/null || true
+docker-compose ps 2>/dev/null || docker ps --filter "name=makona_" --format "table {{.Names}}\t{{.Status}}"
 
 echo ""
 read -p "Appuyez sur Entrée pour continuer avec la migration..."
 
-# Arrêter proprement les conteneurs existants (avec projets séparés)
+# Arrêter proprement les conteneurs existants
 echo ""
 echo "🛑 Arrêt des conteneurs existants..."
-docker-compose -p makona-app down 2>/dev/null || true
-docker-compose -p makona-traefik -f docker-compose.traefik.yml down 2>/dev/null || true
+docker-compose down 2>/dev/null || true
 
 # Si docker-compose down ne fonctionne pas, arrêter manuellement
 for container in makona_backend makona_frontend makona_db; do
@@ -79,28 +74,27 @@ for volume in "${VOLUMES[@]}"; do
     fi
 done
 
-# Démarrer Traefik avec nom de projet séparé (évite les avertissements)
+# Supprimer les conteneurs orphelins (CELA NE SUPPRIME PAS LES VOLUMES)
 echo ""
-echo "🌐 Démarrage de Traefik (projet: makona-traefik)..."
-docker-compose -p makona-traefik -f docker-compose.traefik.yml up -d --remove-orphans
+echo "🧹 Suppression des conteneurs orphelins..."
+echo "   ⚠️  Note: Les volumes de données sont préservés automatiquement"
+docker-compose -f docker-compose.traefik.yml up -d --remove-orphans
 
 # Attendre un peu pour que Traefik démarre
 sleep 2
 
-# Démarrer les services applicatifs avec nom de projet séparé
+# Démarrer les services avec docker-compose.yml (qui utilise Traefik)
 echo ""
-echo "🚀 Démarrage des services applicatifs (projet: makona-app)..."
-docker-compose -p makona-app up -d
+echo "🚀 Démarrage des services applicatifs..."
+echo "   ℹ️  Note: L'avertissement sur 'makona_traefik_prod' est normal et inoffensif"
+echo "      (Traefik est géré séparément par docker-compose.traefik.yml)"
+docker-compose up -d
 
 echo ""
 echo -e "${GREEN}✅ Migration terminée avec succès!${NC}"
 echo ""
 echo "📊 Statut des services:"
-echo "   Traefik:"
-docker-compose -p makona-traefik -f docker-compose.traefik.yml ps
-echo ""
-echo "   Application:"
-docker-compose -p makona-app ps
+docker-compose ps
 
 echo ""
 echo "🔍 Vérification finale des volumes:"
@@ -114,7 +108,6 @@ done
 
 echo ""
 echo "📝 Pour voir les logs:"
-echo "   Traefik: docker-compose -p makona-traefik -f docker-compose.traefik.yml logs -f"
-echo "   Application: docker-compose -p makona-app logs -f"
+echo "   docker-compose logs -f"
 echo ""
 
