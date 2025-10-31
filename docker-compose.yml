@@ -30,12 +30,13 @@ services:
     environment:
       - DEBUG=False
       - SECRET_KEY=${SECRET_KEY}
-      # Variables pour la construction de DATABASE_URL
+      # Variables pour la construction de DATABASE_URL dans entrypoint.sh
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
-      # DATABASE_URL sera construite dans entrypoint.sh si non définie
-      - DATABASE_URL=${DATABASE_URL}
+      # DATABASE_URL est construite automatiquement dans entrypoint.sh
+      # Si vous voulez la définir manuellement, décommentez la ligne suivante:
+      # - DATABASE_URL=${DATABASE_URL}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS}
       - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}
       - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS}
