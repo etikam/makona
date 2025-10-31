@@ -1,6 +1,7 @@
 
 import React from 'react';
     import { Helmet } from 'react-helmet';
+import CountdownSection from '@/components/home/CountdownSection';
 import HeroSection from '@/components/home/HeroSection';
 import CategoriesSection from '@/components/home/CategoriesSection';
     import StatsSection from '@/components/home/StatsSection';
@@ -20,6 +21,7 @@ import CategoriesSection from '@/components/home/CategoriesSection';
           
           <div>
             <HeroSection onNavigate={onNavigate} />
+            <CountdownSection onNavigate={onNavigate} />
             <CategoriesSection onNavigateToCategory={(category) => onNavigate(`/vote/${category.id}`)} />
             <WinnersSection />
             <HallOfFameSection />
