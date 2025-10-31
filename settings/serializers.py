@@ -17,8 +17,15 @@ class HeroCarouselImageSerializer(serializers.ModelSerializer):
         if obj.image:
             request = self.context.get('request')
             if request:
-                return request.build_absolute_uri(obj.image.url)
-            return obj.image.url
+                # Construire l'URL absolue avec le protocole et le domaine
+                image_url = request.build_absolute_uri(obj.image.url)
+                # S'assurer que l'URL ne contient pas de double slash
+                image_url = image_url.replace(':/', '://').replace(':///', '://')
+                return image_url
+            # Fallback si pas de request (ne devrait pas arriver)
+            from django.conf import settings
+            if hasattr(obj.image, 'url'):
+                return obj.image.url
         return None
 
 

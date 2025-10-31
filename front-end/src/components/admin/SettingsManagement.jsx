@@ -114,14 +114,68 @@ const SettingsManagement = () => {
     }
   };
   
-  const handleSaveSettings = async () => {
+  const handleSaveSettings = async (section = null, localData = null) => {
     setSaving(true);
     try {
-      await settingsService.patchSettings(settings);
-      toast({
-        title: "Succès",
-        description: "Paramètres enregistrés avec succès",
-      });
+      if (section === 'countdown') {
+        // Sauvegarder uniquement le chronomètre
+        // Utiliser localData si fourni, sinon utiliser settings
+        const dataToSave = localData || {
+          countdown_enabled: settings.countdown_enabled,
+          countdown_target_date: settings.countdown_target_date
+        };
+        
+        await settingsService.updateCountdown({
+          countdown_enabled: dataToSave.countdown_enabled,
+          countdown_target_date: dataToSave.countdown_target_date
+        });
+        toast({
+          title: "Succès",
+          description: "Chronomètre enregistré avec succès",
+        });
+      } else if (section === 'general') {
+        // Sauvegarder uniquement les paramètres généraux
+        await settingsService.updateGeneralSettings({
+          site_title: settings.site_title,
+          site_description: settings.site_description,
+          contact_email: settings.contact_email,
+          contact_phone: settings.contact_phone,
+          facebook_url: settings.facebook_url,
+          instagram_url: settings.instagram_url,
+          twitter_url: settings.twitter_url,
+          youtube_url: settings.youtube_url,
+          linkedin_url: settings.linkedin_url
+        });
+        toast({
+          title: "Succès",
+          description: "Paramètres généraux enregistrés avec succès",
+        });
+      } else if (section === 'carousel-settings') {
+        // Sauvegarder uniquement les paramètres du carousel
+        await settingsService.updateCarouselSettings({
+          hero_carousel_enabled: settings.hero_carousel_enabled,
+          hero_carousel_auto_play: settings.hero_carousel_auto_play,
+          hero_carousel_interval: settings.hero_carousel_interval
+        });
+        toast({
+          title: "Succès",
+          description: "Paramètres du carousel enregistrés avec succès",
+        });
+      } else {
+        // Sauvegarder tous les paramètres (fallback)
+        await settingsService.patchSettings(settings);
+        toast({
+          title: "Succès",
+          description: "Paramètres enregistrés avec succès",
+        });
+      }
+      
+      // Recharger les données après sauvegarde
+      await loadSettings();
+      
+      // Mettre à jour les settings avec les données rechargées
+      const refreshedData = await settingsService.getSettings();
+      setSettings(refreshedData);
     } catch (error) {
       console.error('Error saving settings:', error);
       toast({
@@ -218,32 +272,156 @@ const SettingsManagement = () => {
 
 // Section Chronomètre
 const CountdownSection = ({ settings, setSettings, onSave, saving }) => {
-  const [localSettings, setLocalSettings] = useState(settings);
+  // Fonction de formatage de date (définie avant useEffect)
+  const formatDateTime = (isoString) => {
+    if (!isoString) {
+      return '';
+    }
+    
+    try {
+      // Vérifier si la date semble invalide (année < 1900 ou > 2100)
+      const dateStr = String(isoString);
+      const yearMatch = dateStr.match(/(\d{4})/);
+      if (yearMatch) {
+        const year = parseInt(yearMatch[1]);
+        if (year < 1900 || year > 2100) {
+          // Ne pas spammer la console - juste retourner vide
+          return ''; // Retourner vide pour forcer l'utilisateur à saisir une nouvelle date
+        }
+      }
+      
+      // Convertir la date ISO en date locale pour l'input datetime-local
+      const date = new Date(isoString);
+      
+      // Vérifier que la date est valide
+      if (isNaN(date.getTime())) {
+        // Ne pas spammer la console - juste retourner vide
+        return ''; // Retourner vide pour forcer l'utilisateur à saisir une nouvelle date
+      }
+      
+      // Pour datetime-local, on doit utiliser les valeurs UTC de la date
+      // car datetime-local attend une date sans timezone (qu'on interprète comme UTC)
+      const year = date.getUTCFullYear();
+      const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(date.getUTCDate()).padStart(2, '0');
+      const hours = String(date.getUTCHours()).padStart(2, '0');
+      const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+      
+      const formatted = `${year}-${month}-${day}T${hours}:${minutes}`;
+      
+      return formatted;
+    } catch (error) {
+      console.error('Erreur lors du formatage de la date:', error, isoString);
+      return ''; // Retourner vide pour forcer l'utilisateur à saisir une nouvelle date
+    }
+  };
+  
+  const [localSettings, setLocalSettings] = useState({
+    countdown_enabled: settings.countdown_enabled ?? true,
+    countdown_target_date: settings.countdown_target_date ?? null
+  });
+  
+  const [timeLeft, setTimeLeft] = useState({
+    days: 0,
+    hours: 0,
+    minutes: 0,
+    seconds: 0
+  });
   
   useEffect(() => {
-    setLocalSettings(settings);
+    setLocalSettings({
+      countdown_enabled: settings.countdown_enabled ?? true,
+      countdown_target_date: settings.countdown_target_date ?? null
+    });
   }, [settings]);
+  
+  // Décompteur en temps réel
+  useEffect(() => {
+    if (!localSettings.countdown_enabled || !localSettings.countdown_target_date) {
+      setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+      return;
+    }
+    
+    const targetDate = new Date(localSettings.countdown_target_date).getTime();
+    
+    const updateCountdown = () => {
+      const now = new Date().getTime();
+      const distance = targetDate - now;
+      
+      if (distance <= 0) {
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+        return;
+      }
+      
+      setTimeLeft({
+        days: Math.floor(distance / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+        minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
+        seconds: Math.floor((distance % (1000 * 60)) / 1000)
+      });
+    };
+    
+    // Mise à jour immédiate
+    updateCountdown();
+    
+    // Mise à jour toutes les secondes
+    const interval = setInterval(updateCountdown, 1000);
+    
+    return () => clearInterval(interval);
+  }, [localSettings.countdown_enabled, localSettings.countdown_target_date]);
   
   const handleDateChange = (e) => {
     const dateValue = e.target.value;
-    const dateTime = dateValue ? new Date(dateValue).toISOString() : null;
-    setLocalSettings({ ...localSettings, countdown_target_date: dateTime });
-  };
-  
-  const formatDateTime = (isoString) => {
-    if (!isoString) return '';
-    const date = new Date(isoString);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
+    
+    if (!dateValue) {
+      setLocalSettings({ ...localSettings, countdown_target_date: null });
+      return;
+    }
+    
+    // Convertir la date locale en ISO string
+    // datetime-local donne une date locale sans timezone au format "YYYY-MM-DDTHH:mm"
+    // On doit la convertir en ISO 8601 avec timezone UTC
+    
+    // Parser la date locale directement
+    const [datePart, timePart] = dateValue.split('T');
+    if (!datePart || !timePart) {
+      console.error('Format de date invalide:', dateValue);
+      return;
+    }
+    
+    const [year, month, day] = datePart.split('-').map(Number);
+    const [hours, minutes] = timePart.split(':').map(Number);
+    
+    // Vérifier que tous les composants sont valides
+    if (isNaN(year) || isNaN(month) || isNaN(day) || isNaN(hours) || isNaN(minutes)) {
+      console.error('Composants de date invalides');
+      return;
+    }
+    
+    // Créer une date UTC (month est 0-indexé dans JavaScript)
+    const utcDate = new Date(Date.UTC(year, month - 1, day, hours, minutes, 0, 0));
+    
+    // Vérifier que la date est valide
+    if (isNaN(utcDate.getTime())) {
+      console.error('Date UTC invalide créée');
+      return;
+    }
+    
+    // Convertir en ISO string
+    const isoString = utcDate.toISOString();
+    
+    setLocalSettings({ ...localSettings, countdown_target_date: isoString });
   };
   
   const handleSave = async () => {
-    setSettings(localSettings);
-    await onSave();
+    // Mettre à jour l'état local des settings AVANT d'appeler onSave
+    const updatedSettings = { ...settings, ...localSettings };
+    setSettings(updatedSettings);
+    
+    // Appeler onSave avec la section 'countdown'
+    // onSave va utiliser les nouvelles valeurs via updatedSettings
+    // On doit passer les valeurs locales à onSave
+    await onSave('countdown', localSettings);
   };
   
   return (
@@ -292,10 +470,89 @@ const CountdownSection = ({ settings, setSettings, onSave, saving }) => {
             <Input
               id="countdown_target_date"
               type="datetime-local"
-              value={formatDateTime(localSettings.countdown_target_date)}
+              value={formatDateTime(localSettings.countdown_target_date) || ''}
               onChange={handleDateChange}
               className="bg-slate-800/50 border-gray-600 text-white"
+              placeholder="Sélectionnez une date et une heure"
             />
+            {/* Avertissement si la date actuelle est invalide */}
+            {settings.countdown_target_date && !formatDateTime(settings.countdown_target_date) && (
+              <div className="mt-3 p-3 bg-red-900/30 border border-red-700/50 rounded-lg">
+                <p className="text-xs text-red-300 font-bold mb-1">⚠️ Date invalide détectée</p>
+                <p className="text-xs text-red-400 mb-2">
+                  La date enregistrée dans la base de données est invalide : <code className="bg-red-950/50 px-1 rounded">{String(settings.countdown_target_date)}</code>
+                </p>
+                <p className="text-xs text-yellow-400 mb-2">
+                  Veuillez saisir une nouvelle date valide dans le champ ci-dessus et cliquer sur "Enregistrer" pour corriger le problème.
+                </p>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setLocalSettings({ ...localSettings, countdown_target_date: null });
+                    // Mettre à jour les settings aussi pour que la sauvegarde envoie null
+                    setSettings({ ...settings, countdown_target_date: null });
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs bg-red-800/50 border-red-700 text-red-300 hover:bg-red-800"
+                >
+                  Réinitialiser la date
+                </Button>
+              </div>
+            )}
+            
+            {/* Décompteur en temps réel */}
+            {localSettings.countdown_enabled && localSettings.countdown_target_date && (
+              <div className="mt-4 p-4 bg-gradient-to-br from-blue-900/30 to-purple-900/30 border border-blue-700/50 rounded-xl">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-bold text-blue-300 flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    Décompteur en temps réel
+                  </h3>
+                  <p className="text-xs text-gray-400">
+                    {new Date(localSettings.countdown_target_date).getTime() > new Date().getTime() 
+                      ? 'Chronomètre actif' 
+                      : 'Date passée'}
+                  </p>
+                </div>
+                
+                {new Date(localSettings.countdown_target_date).getTime() > new Date().getTime() ? (
+                  <div className="grid grid-cols-4 gap-3">
+                    {[
+                      { label: 'Jours', value: timeLeft.days },
+                      { label: 'Heures', value: timeLeft.hours },
+                      { label: 'Minutes', value: timeLeft.minutes },
+                      { label: 'Secondes', value: timeLeft.seconds }
+                    ].map((item) => (
+                      <div key={item.label} className="bg-slate-800/60 border border-slate-700/50 rounded-lg p-3 text-center backdrop-blur-sm">
+                        <div className="font-bold text-yellow-400 text-2xl mb-1">
+                          {String(item.value || 0).padStart(2, '0')}
+                        </div>
+                        <div className="text-gray-400 text-xs uppercase">{item.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-4">
+                    <p className="text-red-400 font-semibold">⚠️ La date cible est passée</p>
+                    <p className="text-gray-400 text-xs mt-1">Le chronomètre affichera "Voter" sur la page d'accueil</p>
+                  </div>
+                )}
+                
+                <div className="mt-3 pt-3 border-t border-gray-700/50">
+                  <p className="text-xs text-gray-400 text-center">
+                    Date cible : {new Date(localSettings.countdown_target_date).toLocaleString('fr-FR', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      timeZoneName: 'short'
+                    })}
+                  </p>
+                </div>
+              </div>
+            )}
             <p className="text-sm text-gray-400">
               Le chronomètre affichera "Participer" avant cette date et "Voter" après.
             </p>
@@ -336,7 +593,10 @@ const CarouselSection = ({ images, onRefresh }) => {
       order: image.order || 1,
       is_active: image.is_active !== undefined ? image.is_active : true
     });
-    setPreview(image.image_url);
+    // Utiliser image_url si disponible, sinon construire depuis image
+    const previewUrl = image.image_url || 
+                      (image.image ? `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'}/../${image.image}` : null);
+    setPreview(previewUrl);
     setShowModal(true);
   };
 
@@ -420,9 +680,43 @@ const CarouselSection = ({ images, onRefresh }) => {
               Aucune image dans le carousel
             </p>
           ) : (
-            images.map((image) => (
+            images.map((image) => {
+              // Construire l'URL de l'image avec fallback
+              let imageUrl = image.image_url;
+              
+              // Si image_url n'est pas disponible, essayer de construire depuis image
+              if (!imageUrl && image.image) {
+                const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+                // Enlever /api à la fin si présent pour obtenir le domaine de base
+                const baseUrl = apiBase.replace(/\/api$/, '');
+                // Construire l'URL en enlevant le / au début du chemin image si présent
+                const imagePath = image.image.startsWith('/') ? image.image : `/${image.image}`;
+                imageUrl = `${baseUrl}${imagePath}`;
+              }
+              
+              // Log pour débogage
+              if (!imageUrl) {
+                console.warn('Image URL manquante pour:', image);
+              }
+              
+              return (
               <div key={image.id} className="bg-slate-800/50 rounded-lg p-4">
-                <img src={image.image_url} alt={image.alt_text} className="w-full h-48 object-cover rounded-lg mb-2" />
+                {imageUrl ? (
+                  <img 
+                    src={imageUrl} 
+                    alt={image.alt_text || image.title || 'Image du carousel'} 
+                    className="w-full h-48 object-cover rounded-lg mb-2"
+                    onError={(e) => {
+                      console.error('Erreur de chargement de l\'image:', imageUrl, image);
+                      e.target.style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-48 bg-gray-700 rounded-lg mb-2 flex items-center justify-center">
+                    <Image className="w-12 h-12 text-gray-500" />
+                    <span className="ml-2 text-gray-400 text-sm">Aucune image</span>
+                  </div>
+                )}
                 <p className="text-white font-semibold truncate">{image.title || 'Sans titre'}</p>
                 <div className="flex items-center gap-2 mt-2">
                   <Badge variant={image.is_active ? "default" : "secondary"} className="text-xs">
@@ -439,7 +733,8 @@ const CarouselSection = ({ images, onRefresh }) => {
                   </Button>
                 </div>
               </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
@@ -1218,15 +1513,43 @@ const HallOfFameSection = ({ entries, onRefresh }) => {
 
 // Section Général
 const GeneralSection = ({ settings, setSettings, onSave, saving }) => {
-  const [localSettings, setLocalSettings] = useState(settings);
+  const [localSettings, setLocalSettings] = useState({
+    site_title: settings.site_title ?? '',
+    site_description: settings.site_description ?? '',
+    contact_email: settings.contact_email ?? '',
+    contact_phone: settings.contact_phone ?? '',
+    facebook_url: settings.facebook_url ?? '',
+    instagram_url: settings.instagram_url ?? '',
+    twitter_url: settings.twitter_url ?? '',
+    youtube_url: settings.youtube_url ?? '',
+    linkedin_url: settings.linkedin_url ?? '',
+    hero_carousel_enabled: settings.hero_carousel_enabled ?? true,
+    hero_carousel_auto_play: settings.hero_carousel_auto_play ?? true,
+    hero_carousel_interval: settings.hero_carousel_interval ?? 5000
+  });
   
   useEffect(() => {
-    setLocalSettings(settings);
+    setLocalSettings({
+      site_title: settings.site_title ?? '',
+      site_description: settings.site_description ?? '',
+      contact_email: settings.contact_email ?? '',
+      contact_phone: settings.contact_phone ?? '',
+      facebook_url: settings.facebook_url ?? '',
+      instagram_url: settings.instagram_url ?? '',
+      twitter_url: settings.twitter_url ?? '',
+      youtube_url: settings.youtube_url ?? '',
+      linkedin_url: settings.linkedin_url ?? '',
+      hero_carousel_enabled: settings.hero_carousel_enabled ?? true,
+      hero_carousel_auto_play: settings.hero_carousel_auto_play ?? true,
+      hero_carousel_interval: settings.hero_carousel_interval ?? 5000
+    });
   }, [settings]);
   
   const handleSave = async () => {
-    setSettings(localSettings);
-    await onSave();
+    // Mettre à jour l'état local des settings
+    setSettings({ ...settings, ...localSettings });
+    // Appeler onSave avec la section 'general'
+    await onSave('general');
   };
   return (
     <div className="space-y-6">
@@ -1351,9 +1674,31 @@ const GeneralSection = ({ settings, setSettings, onSave, saving }) => {
       
       {/* Carousel Settings */}
       <div className="bg-gradient-to-br from-gray-800/60 to-gray-900/60 backdrop-blur-sm border border-gray-700/50 rounded-xl p-6 space-y-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Image className="w-5 h-5 text-yellow-400" />
-          <h3 className="text-xl font-bold text-white">Paramètres du Carousel</h3>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Image className="w-5 h-5 text-yellow-400" />
+            <h3 className="text-xl font-bold text-white">Paramètres du Carousel</h3>
+          </div>
+          <Button 
+            onClick={async () => {
+              setSettings({ ...settings, ...localSettings });
+              await onSave('carousel-settings');
+            }}
+            disabled={saving}
+            className="btn-primary"
+          >
+            {saving ? (
+              <>
+                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                Enregistrement...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4 mr-2" />
+                Enregistrer
+              </>
+            )}
+          </Button>
         </div>
         
         <div className="space-y-4">

@@ -15,7 +15,13 @@ class SettingsService {
    * Récupérer les paramètres (admin)
    */
   async getSettings() {
-    return await apiService.get('/settings/admin/');
+    try {
+      const response = await apiService.get('/settings/admin/');
+      return response;
+    } catch (error) {
+      console.error('Error getting settings:', error);
+      throw error;
+    }
   }
   
   /**
@@ -30,6 +36,27 @@ class SettingsService {
    */
   async patchSettings(settingsData) {
     return await apiService.patch('/settings/admin/', settingsData);
+  }
+  
+  /**
+   * Mettre à jour uniquement le chronomètre
+   */
+  async updateCountdown(countdownData) {
+    return await apiService.patch('/settings/admin/countdown/', countdownData);
+  }
+  
+  /**
+   * Mettre à jour uniquement les paramètres généraux
+   */
+  async updateGeneralSettings(generalData) {
+    return await apiService.patch('/settings/admin/general/', generalData);
+  }
+  
+  /**
+   * Mettre à jour uniquement les paramètres du carousel
+   */
+  async updateCarouselSettings(carouselData) {
+    return await apiService.patch('/settings/admin/carousel-settings/', carouselData);
   }
   
   /**

@@ -13,6 +13,9 @@ urlpatterns = [
     
     # Endpoints admin
     path('admin/', views.admin_settings, name='settings-admin'),
+    path('admin/countdown/', views.update_countdown_settings, name='settings-countdown'),
+    path('admin/general/', views.update_general_settings, name='settings-general'),
+    path('admin/carousel-settings/', views.update_carousel_settings, name='settings-carousel-settings'),
     path('admin/carousel/', views.HeroCarouselImageView.as_view(), name='carousel-admin'),
     path('admin/carousel/<int:pk>/', views.HeroCarouselImageDetailView.as_view(), name='carousel-detail'),
     path('admin/team/', views.TeamMemberAdminView.as_view(), name='team-members-admin'),
