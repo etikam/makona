@@ -25,25 +25,30 @@ else
     echo "✅ Réseau makona_network existe déjà"
 fi
 
-# Démarrer Traefik
+# Démarrer Traefik (avec nom de projet séparé pour éviter les avertissements)
 echo ""
 echo "🌐 Démarrage de Traefik..."
-docker-compose -f docker-compose.traefik.yml up -d
+docker-compose -p makona-traefik -f docker-compose.traefik.yml up -d
 
-# Démarrer l'application
+# Démarrer l'application (avec nom de projet séparé)
 echo ""
 echo "🐳 Démarrage de l'application..."
-docker-compose up -d --build
+docker-compose -p makona-app up -d --build
 
 echo ""
 echo "✅ Configuration terminée!"
 echo ""
 echo "📊 Statut des services:"
-docker-compose ps
+echo "   Traefik:"
+docker-compose -p makona-traefik -f docker-compose.traefik.yml ps
+echo ""
+echo "   Application:"
+docker-compose -p makona-app ps
 
 echo ""
 echo "📝 Logs (pour voir les logs en temps réel):"
-echo "   docker-compose logs -f"
+echo "   Traefik: docker-compose -p makona-traefik -f docker-compose.traefik.yml logs -f"
+echo "   Application: docker-compose -p makona-app logs -f"
 echo ""
 echo "🌐 Accès:"
 echo "   Frontend: http://localhost"
