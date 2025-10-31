@@ -8,7 +8,7 @@ import {
   Image, Video, FileText, Music, File, Settings, Palette,
   ChevronLeft, ChevronRight, RefreshCw, AlertCircle,
   Search, Filter, BarChart3, Users, Calendar, TrendingUp,
-  Grid3X3, List, MoreVertical, Star, Clock, CheckCircle, Award
+  Grid3X3, List, MoreVertical, Star, Clock, CheckCircle, Award, Medal
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -55,7 +55,8 @@ const CategoriesManagement = () => {
     max_audio_duration: null,
     awards_trophy: false,
     awards_certificate: false,
-    awards_monetary: false
+    awards_monetary: false,
+    awards_plaque: false
   });
   
   // États pour les erreurs de validation des formulaires
@@ -287,7 +288,8 @@ const CategoriesManagement = () => {
       max_audio_duration: null,
       awards_trophy: false,
       awards_certificate: false,
-      awards_monetary: false
+      awards_monetary: false,
+      awards_plaque: false
     });
   };
 
@@ -314,7 +316,8 @@ const CategoriesManagement = () => {
       max_audio_duration: category.max_audio_duration,
       awards_trophy: category.awards_trophy || false,
       awards_certificate: category.awards_certificate || false,
-      awards_monetary: category.awards_monetary || false
+      awards_monetary: category.awards_monetary || false,
+      awards_plaque: category.awards_plaque || false
     });
     setShowEditModal(true);
   };
@@ -328,6 +331,39 @@ const CategoriesManagement = () => {
       documents: File
     };
     return icons[type] || FileText;
+  };
+
+  // Rendu unifié des prix attribués sous forme de puces homogènes
+  const renderAwardChips = (source) => {
+    const chips = [];
+    if (source.awards_trophy) {
+      chips.push({ key: 'trophy', label: 'Trophée', color: 'text-yellow-400 border-yellow-500/30 bg-yellow-500/10', Icon: Award });
+    }
+    if (source.awards_certificate) {
+      chips.push({ key: 'certificate', label: 'Satisfécit', color: 'text-blue-300 border-blue-500/30 bg-blue-500/10', Icon: FileText });
+    }
+    if (source.awards_monetary) {
+      chips.push({ key: 'monetary', label: 'Prime', color: 'text-green-300 border-green-500/30 bg-green-500/10', Icon: TrendingUp });
+    }
+    if (source.awards_plaque) {
+      chips.push({ key: 'plaque', label: 'Plaque', color: 'text-amber-300 border-amber-500/30 bg-amber-500/10', Icon: Medal });
+    }
+
+    if (chips.length === 0) return null;
+
+    return (
+      <div className="flex flex-wrap gap-2 mt-2">
+        {chips.map(({ key, label, color, Icon }) => (
+          <div
+            key={key}
+            className={`inline-flex items-center justify-center gap-1.5 px-3 h-7 min-w-[120px] rounded-full border ${color} text-xs font-medium`}
+          >
+            <Icon className="w-3.5 h-3.5" />
+            <span>{label}</span>
+          </div>
+        ))}
+      </div>
+    );
   };
 
   const getMediaTypeColor = (type) => {
@@ -384,8 +420,8 @@ const CategoriesManagement = () => {
       <div className="bg-gradient-to-r from-gray-800/50 to-gray-900/50 rounded-2xl p-8 border border-gray-700">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Gestion des Catégories</h1>
-            <p className="text-gray-400 text-sm sm:text-base">Configurez les catégories et leurs types de médias requis</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Gestion des Prix</h1>
+            <p className="text-gray-400 text-sm sm:text-base">Configurez les prix et leurs types de médias requis</p>
           </div>
           <Button
             onClick={openCreateModal}
@@ -403,7 +439,7 @@ const CategoriesManagement = () => {
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
             <Input
-              placeholder="Rechercher une catégorie..."
+              placeholder="Rechercher un prix..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9 sm:pl-10 bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 h-10 sm:h-12 text-sm sm:text-base"
@@ -492,7 +528,7 @@ const CategoriesManagement = () => {
                     <div className="flex items-center gap-2 flex-wrap">
                       {category.category_class && (
                         <Badge className="bg-blue-500/20 text-blue-300 border-blue-400/30">
-                          {categoryClasses.find(cls => cls.id === category.category_class)?.name || 'Classe inconnue'}
+                          {categoryClasses.find(cls => cls.id === category.category_class)?.name || 'Catégorie de prix inconnue'}
                         </Badge>
                       )}
                       <Badge 
@@ -501,6 +537,7 @@ const CategoriesManagement = () => {
                       >
                         {category.is_active ? "Active" : "Inactive"}
                       </Badge>
+                      {renderAwardChips(category)}
                     </div>
                   </div>
                 </div>
@@ -643,6 +680,10 @@ const CategoriesManagement = () => {
                   >
                     {category.is_active ? "Active" : "Inactive"}
                   </Badge>
+                  {/* Prix attribués (vue liste) */}
+                  <div className="hidden md:block ml-2 min-w-[260px]">
+                    {renderAwardChips(category)}
+                  </div>
                   
                   <div className="flex items-center gap-1">
                     <Button
@@ -1009,9 +1050,25 @@ const CategoriesManagement = () => {
                         Sélectionnez les types de prix qui seront attribués pour cette catégorie
                       </p>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         {/* Trophée */}
-                        <div className="flex items-center space-x-3 p-4 bg-gray-700/30 rounded-lg border border-gray-600 hover:border-yellow-500/50 transition-colors">
+                        <div
+                          className={`relative flex items-center space-x-3 p-4 bg-gray-700/30 rounded-lg border transition-colors cursor-pointer ${formData.awards_trophy ? 'border-yellow-400/60 ring-1 ring-yellow-400/30 bg-yellow-500/5' : 'border-gray-600 hover:border-yellow-500/50'}`}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => setFormData(prev => ({ ...prev, awards_trophy: !prev.awards_trophy }))}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              setFormData(prev => ({ ...prev, awards_trophy: !prev.awards_trophy }));
+                            }
+                          }}
+                        >
+                          {formData.awards_trophy && (
+                            <div className="absolute top-2 right-2 text-yellow-400">
+                              <CheckCircle className="w-4 h-4" />
+                            </div>
+                          )}
                           <Switch
                             id="awards_trophy"
                             checked={formData.awards_trophy}
@@ -1027,7 +1084,23 @@ const CategoriesManagement = () => {
                         </div>
 
                         {/* Satisfecit */}
-                        <div className="flex items-center space-x-3 p-4 bg-gray-700/30 rounded-lg border border-gray-600 hover:border-blue-500/50 transition-colors">
+                        <div
+                          className={`relative flex items-center space-x-3 p-4 bg-gray-700/30 rounded-lg border transition-colors cursor-pointer ${formData.awards_certificate ? 'border-blue-400/60 ring-1 ring-blue-400/30 bg-blue-500/5' : 'border-gray-600 hover:border-blue-500/50'}`}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => setFormData(prev => ({ ...prev, awards_certificate: !prev.awards_certificate }))}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              setFormData(prev => ({ ...prev, awards_certificate: !prev.awards_certificate }));
+                            }
+                          }}
+                        >
+                          {formData.awards_certificate && (
+                            <div className="absolute top-2 right-2 text-blue-400">
+                              <CheckCircle className="w-4 h-4" />
+                            </div>
+                          )}
                           <Switch
                             id="awards_certificate"
                             checked={formData.awards_certificate}
@@ -1043,7 +1116,23 @@ const CategoriesManagement = () => {
                         </div>
 
                         {/* Primes monétaires */}
-                        <div className="flex items-center space-x-3 p-4 bg-gray-700/30 rounded-lg border border-gray-600 hover:border-green-500/50 transition-colors">
+                        <div
+                          className={`relative flex items-center space-x-3 p-4 bg-gray-700/30 rounded-lg border transition-colors cursor-pointer ${formData.awards_monetary ? 'border-green-400/60 ring-1 ring-green-400/30 bg-green-500/5' : 'border-gray-600 hover:border-green-500/50'}`}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => setFormData(prev => ({ ...prev, awards_monetary: !prev.awards_monetary }))}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              setFormData(prev => ({ ...prev, awards_monetary: !prev.awards_monetary }));
+                            }
+                          }}
+                        >
+                          {formData.awards_monetary && (
+                            <div className="absolute top-2 right-2 text-green-400">
+                              <CheckCircle className="w-4 h-4" />
+                            </div>
+                          )}
                           <Switch
                             id="awards_monetary"
                             checked={formData.awards_monetary}
@@ -1056,6 +1145,38 @@ const CategoriesManagement = () => {
                             <p className="text-gray-400 text-sm">Récompenses financières</p>
                           </div>
                           <TrendingUp className="w-5 h-5 text-green-400" />
+                        </div>
+
+                        {/* Plaque commémorative */}
+                        <div
+                          className={`relative flex items-center space-x-3 p-4 bg-gray-700/30 rounded-lg border transition-colors cursor-pointer ${formData.awards_plaque ? 'border-amber-400/60 ring-1 ring-amber-400/30 bg-amber-500/5' : 'border-gray-600 hover:border-amber-500/50'}`}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => setFormData(prev => ({ ...prev, awards_plaque: !prev.awards_plaque }))}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              setFormData(prev => ({ ...prev, awards_plaque: !prev.awards_plaque }));
+                            }
+                          }}
+                        >
+                          {formData.awards_plaque && (
+                            <div className="absolute top-2 right-2 text-amber-400">
+                              <CheckCircle className="w-4 h-4" />
+                            </div>
+                          )}
+                          <Switch
+                            id="awards_plaque"
+                            checked={formData.awards_plaque}
+                            onCheckedChange={(checked) => setFormData(prev => ({ ...prev, awards_plaque: checked }))}
+                          />
+                          <div className="flex-1">
+                            <Label htmlFor="awards_plaque" className="text-white font-medium cursor-pointer">
+                              Plaque commémorative
+                            </Label>
+                            <p className="text-gray-400 text-sm">Distinction symbolique</p>
+                          </div>
+                          <Medal className="w-5 h-5 text-amber-400" />
                         </div>
                       </div>
                     </div>
@@ -1159,6 +1280,8 @@ const CategoriesManagement = () => {
                         >
                           {selectedCategory.is_active ? "Active" : "Inactive"}
                         </Badge>
+                        {/* Prix attribués */}
+                        <div className="ml-2">{renderAwardChips(selectedCategory)}</div>
                       </div>
                     </div>
                   </div>

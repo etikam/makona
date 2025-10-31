@@ -17,34 +17,35 @@ const ResponsiveSidebarNav = ({
   className = ""
 }) => {
   const navigationItems = [
-    {
-      key: 'candidates',
-      icon: Users,
-      label: 'Gestion Candidats',
-      isActive: activeTab === 'candidates'
-    },
+   
     {
       key: 'users',
       icon: UserCheck,
-      label: 'Gestion Utilisateurs',
+      label: 'Utilisateurs',
       isActive: activeTab === 'users'
+    },
+    {
+      key: 'candidates',
+      icon: Users,
+      label: 'Candidats & Candidatures',
+      isActive: activeTab === 'candidates'
     },
     {
       key: 'category-classes',
       icon: Tag,
-      label: 'Classes de Catégories',
+      label: 'Catégories de Prix',
       isActive: activeTab === 'category-classes'
     },
     {
       key: 'categories',
       icon: Tag,
-      label: 'Gestion Catégories',
+      label: 'Gestion des Prix',
       isActive: activeTab === 'categories'
     },
     {
       key: 'votes',
       icon: BarChart2,
-      label: 'Visualisation des Votes',
+      label: 'Votes & Résultats',
       isActive: activeTab === 'votes'
     },
     {

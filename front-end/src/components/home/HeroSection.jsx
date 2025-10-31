@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, Calendar, MapPin, ArrowRight, ChevronLeft, ChevronRight as ChevronRightIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -74,6 +74,15 @@ const HeroSection = ({ onNavigate }) => {
   const [[page, direction], setPage] = useState([0, 0]);
   const imageIndex = page % images.length;
 
+  // Decorative particles (non-blocking)
+  const particles = useMemo(() => Array.from({ length: 18 }).map((_, i) => ({
+    id: i,
+    left: Math.random() * 90 + '%',
+    topStart: 10 + Math.random() * 70,
+    size: 6 + Math.round(Math.random() * 10),
+    delay: Math.random() * 3,
+  })), []);
+
   const paginate = (newDirection) => {
     setPage([page + newDirection, newDirection]);
   };
@@ -104,6 +113,24 @@ const HeroSection = ({ onNavigate }) => {
       <div className="absolute inset-0 bg-slate-900"></div>
       <SeaWaveAnimation />
 
+      {/* Soft glow to fill negative space */}
+      <div className="pointer-events-none absolute -left-32 top-1/4 w-[40rem] h-[40rem] rounded-full bg-gradient-to-br from-yellow-500/10 via-amber-400/5 to-transparent blur-3xl" />
+      <div className="pointer-events-none absolute right-0 top-10 w-[30rem] h-[30rem] rounded-full bg-gradient-to-tr from-blue-500/10 via-cyan-400/5 to-transparent blur-3xl" />
+
+      {/* Floating particles */}
+      <div className="pointer-events-none absolute inset-0">
+        {particles.map(p => (
+          <motion.span
+            key={p.id}
+            className="absolute rounded-full bg-yellow-400/20 shadow-[0_0_20px_rgba(250,204,21,0.25)]"
+            style={{ width: p.size, height: p.size, left: p.left }}
+            initial={{ opacity: 0, y: p.topStart + 40 }}
+            animate={{ opacity: [0, 1, 0.8, 0], y: [p.topStart + 40, p.topStart, p.topStart - 20, p.topStart - 60], scale: [0.8, 1, 1, 0.9] }}
+            transition={{ duration: 10 + Math.random() * 6, repeat: Infinity, ease: 'easeInOut', delay: p.delay }}
+          />
+        ))}
+      </div>
+
       <motion.div 
         className="absolute top-0 left-0 w-72 h-72 md:w-96 md:h-96 -translate-x-1/3 -translate-y-1/3 z-0"
         initial={{ opacity: 0, scale: 0.5 }}
@@ -118,34 +145,126 @@ const HeroSection = ({ onNavigate }) => {
       <div className="absolute inset-0 bg-gradient-to-b from-blue-950/30 via-slate-900/70 to-slate-900"></div>
       
       <div className="container mx-auto px-4 relative z-10">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 xl:gap-16 items-center">
           <motion.div
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8 }}
-            className="text-center lg:text-left"
+            className="text-center lg:text-left lg:col-span-7 xl:col-span-6"
           >
-            <div className="inline-flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/30 rounded-full px-6 py-2 mb-6">
-              <Trophy className="w-5 h-5 text-yellow-400" />
-              <span className="text-yellow-400 font-semibold">4ème Édition - Guéckédou 2025</span>
+            <div className="inline-flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/30 rounded-full px-4 md:px-6 py-1.5 md:py-2 mb-5 md:mb-6">
+              <Trophy className="w-4 h-4 md:w-5 md:h-5 text-yellow-400" />
+              <span className="text-yellow-400 font-semibold text-[clamp(0.75rem,1.6vw,0.95rem)]">4ème Édition - Guéckédou 2025</span>
             </div>
-            <h1 className="text-5xl md:text-7xl font-bold mb-4 leading-tight">
-              <span className="text-white">Makona Awards</span>
-              <span className="text-gradient-gold"> 2025</span>
-            </h1>
-            <p className="text-lg md:text-xl text-gray-300 mb-6 max-w-xl mx-auto lg:mx-0">
+            <motion.h1
+              className="font-extrabold mb-5 leading-tight tracking-tight whitespace-normal xl:whitespace-nowrap text-[clamp(1.75rem,4.5vw,5rem)]"
+            >
+              {"Makona Awards ".split("").map((char, i) => (
+                <motion.span
+                  key={`ma-${i}`}
+                  className="inline-block text-white"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: [0, 1, 1, 0], y: [8, 0, 0, 8] }}
+                  transition={{ duration: 6, repeat: Infinity, delay: i * 0.12, ease: 'easeInOut' }}
+                >
+                  {char === " " ? "\u00A0" : char}
+                </motion.span>
+              ))}
+              {"2025".split("").map((char, i) => (
+                <motion.span
+                  key={`year-${i}`}
+                  className="inline-block text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-amber-300 to-yellow-500"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: [0, 1, 1, 0], y: [8, 0, 0, 8] }}
+                  transition={{ duration: 6, repeat: Infinity, delay: ("Makona Awards ".length * 0.12) + i * 0.12, ease: 'easeInOut' }}
+                >
+                  {char}
+                </motion.span>
+              ))}
+              <motion.span
+                className="block h-1 mt-2 w-0 bg-gradient-to-r from-yellow-500 via-amber-400 to-yellow-300"
+                initial={{ width: 0 }}
+                animate={{ width: "8rem" }}
+                transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }}
+              />
+            </motion.h1>
+            <p className="text-[clamp(1rem,1.6vw,1.25rem)] text-gray-300 mb-7 max-w-3xl mx-auto lg:mx-0">
               Célébrer l'excellence, inspirer le changement dans la région de la Makona Union.
             </p>
             <div className="flex flex-wrap items-center justify-center lg:justify-start gap-x-6 gap-y-2 mb-8">
-              <div className="flex items-center gap-2 text-gray-300"><Calendar className="w-5 h-5 text-yellow-400" /><span>28-30 Décembre 2025</span></div>
-              <div className="flex items-center gap-2 text-gray-300"><MapPin className="w-5 h-5 text-green-400" /><span>Guéckédou, Guinée</span></div>
+              <div className="flex items-center gap-2 text-gray-300 text-[clamp(0.85rem,1.4vw,1rem)]"><Calendar className="w-4 h-4 md:w-5 md:h-5 text-yellow-400" /><span>28-30 Décembre 2025</span></div>
+              <div className="flex items-center gap-2 text-gray-300 text-[clamp(0.85rem,1.4vw,1rem)]"><MapPin className="w-4 h-4 md:w-5 md:h-5 text-green-400" /><span>Guéckédou, Guinée</span></div>
             </div>
-             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                <Button onClick={() => onNavigate('vote')} className="btn-primary group">
-                    Voter Maintenant <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+            
+            {/* Highlights row - visible en premier sur mobile */}
+            <div className="mb-6 lg:mt-6 flex flex-wrap justify-center lg:justify-start gap-2.5 sm:gap-3 max-w-2xl mx-auto lg:mx-0">
+              {[
+                { icon: Trophy, title: '40+ Prix', subtitle: 'Catégories de prix' },
+                { icon: Calendar, title: '28–30 Déc.', subtitle: 'Guéckédou, Guinée' },
+                { icon: MapPin, title: 'Makona Union', subtitle: 'Excellence régionale' },
+              ].map((item, idx) => (
+                <div 
+                  key={idx} 
+                  className="card-glass px-3.5 py-2.5 sm:px-4 sm:py-3 flex items-center gap-2.5 sm:gap-3 border border-yellow-500/10 rounded-xl hover:border-yellow-500/20 transition-colors shadow-sm hover:shadow-md"
+                >
+                  <div className="flex-shrink-0 p-1.5 sm:p-2 bg-yellow-500/10 rounded-lg">
+                    <item.icon className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-white font-semibold leading-tight text-xs sm:text-sm truncate">{item.title}</p>
+                    <p className="text-[0.65rem] sm:text-xs text-gray-400 truncate">{item.subtitle}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Bouton Participer - avant le chronomètre sur mobile */}
+            <div className="mb-6 lg:hidden flex justify-center">
+              <Button 
+                onClick={() => onNavigate('results')} 
+                className="btn-secondary w-fit px-4 py-2.5 rounded-full shadow-md hover:shadow-lg transition-all duration-300"
+              >
+                <span className="flex items-center justify-center gap-2">
+                  <span className="text-sm font-semibold">Participer</span>
+                </span>
+              </Button>
+            </div>
+
+            {/* Chronomètre - visible sur mobile après stats et Participer */}
+            <div className="mb-6 lg:hidden">
+              <div className="grid grid-cols-4 gap-2 w-full max-w-lg mx-auto">
+                {[{ label: 'Jours', value: timeLeft.days }, { label: 'Heures', value: timeLeft.hours }, { label: 'Minutes', value: timeLeft.minutes }, { label: 'Secondes', value: timeLeft.seconds }].map((item) => (
+                  <div key={item.label} className="card-glass p-3 text-center">
+                    <div className="font-bold text-gradient-gold text-[clamp(1.5rem,4vw,2rem)]">{(item.value || 0).toString().padStart(2, '0')}</div>
+                    <div className="text-gray-400 uppercase text-[clamp(0.6rem,1vw,0.75rem)]">{item.label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Bouton Voter - dernier sur mobile */}
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4 justify-center lg:justify-start mb-6 lg:mb-0">
+                <Button 
+                  onClick={() => onNavigate('vote')} 
+                  className="btn-primary group w-fit px-4 py-2.5 sm:px-6 md:px-8 sm:py-3.5 md:py-4 rounded-full sm:rounded-lg shadow-lg hover:shadow-xl transition-all duration-300"
+                >
+                  <span className="flex items-center justify-center gap-2">
+                    <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <span className="text-sm sm:text-base md:text-lg font-semibold">
+                      <span className="sm:hidden">Voter</span>
+                      <span className="hidden sm:inline">Voter Maintenant</span>
+                    </span>
+                    <ArrowRight className="hidden sm:block w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
+                  </span>
                 </Button>
-                <Button onClick={() => onNavigate('results')} className="btn-secondary">
-                    Voir les Résultats
+                {/* Bouton Participer - caché sur mobile, visible sur desktop */}
+                <Button 
+                  onClick={() => onNavigate('results')} 
+                  className="hidden lg:block btn-secondary w-fit px-4 py-2.5 sm:px-6 md:px-8 sm:py-3.5 md:py-4 rounded-full sm:rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
+                >
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="text-sm sm:text-base md:text-lg font-semibold">Participer</span>
+                  </span>
                 </Button>
             </div>
           </motion.div>
@@ -154,9 +273,9 @@ const HeroSection = ({ onNavigate }) => {
             initial={{ opacity: 0, x: 50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8 }}
-            className="flex flex-col items-center"
+            className="flex flex-col items-center lg:col-span-5 xl:col-span-6"
           >
-            <div className="relative w-full max-w-lg h-[25rem] card-glass overflow-hidden mb-6">
+            <div className="relative w-full h-[26rem] md:h-[32rem] xl:h-[36rem] 3xl:h-[40rem] card-glass overflow-hidden mb-6">
                 <AnimatePresence initial={false} custom={direction}>
                     <motion.div
                         key={page}
@@ -186,11 +305,12 @@ const HeroSection = ({ onNavigate }) => {
                 </button>
             </div>
             
-            <div className="grid grid-cols-4 gap-2 w-full max-w-lg">
+            {/* Chronomètre - caché sur mobile (visible dans la colonne gauche), visible sur desktop */}
+            <div className="hidden lg:grid grid-cols-4 gap-2 w-full max-w-lg">
               {[{ label: 'Jours', value: timeLeft.days }, { label: 'Heures', value: timeLeft.hours }, { label: 'Minutes', value: timeLeft.minutes }, { label: 'Secondes', value: timeLeft.seconds }].map((item) => (
                 <div key={item.label} className="card-glass p-3 text-center">
-                  <div className="text-3xl font-bold text-gradient-gold">{(item.value || 0).toString().padStart(2, '0')}</div>
-                  <div className="text-xs text-gray-400 uppercase">{item.label}</div>
+                  <div className="font-bold text-gradient-gold text-[clamp(1.5rem,4vw,2rem)]">{(item.value || 0).toString().padStart(2, '0')}</div>
+                  <div className="text-gray-400 uppercase text-[clamp(0.6rem,1vw,0.75rem)]">{item.label}</div>
                 </div>
               ))}
             </div>

@@ -226,6 +226,11 @@ class Category(models.Model):
         verbose_name="Primes monétaires",
         help_text="Cette catégorie attribue des primes monétaires"
     )
+    awards_plaque = models.BooleanField(
+        default=False,
+        verbose_name="Plaque commémorative",
+        help_text="Cette catégorie attribue une plaque commémorative"
+    )
     
     # Métadonnées
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Date de création")

@@ -1,9 +1,8 @@
 
 import React from 'react';
     import { Helmet } from 'react-helmet';
-    import HeroSection from '@/components/home/HeroSection';
-    import AboutSection from '@/components/home/AboutSection';
-    import CategoriesSection from '@/components/home/CategoriesSection';
+import HeroSection from '@/components/home/HeroSection';
+import CategoriesSection from '@/components/home/CategoriesSection';
     import StatsSection from '@/components/home/StatsSection';
     import CTASection from '@/components/home/CTASection';
     import ObjectivesSection from '@/components/home/ObjectivesSection';
@@ -21,8 +20,6 @@ import React from 'react';
           
           <div>
             <HeroSection onNavigate={onNavigate} />
-            <AboutSection />
-            <ObjectivesSection />
             <CategoriesSection onNavigateToCategory={(category) => onNavigate(`/vote/${category.id}`)} />
             <WinnersSection />
             <HallOfFameSection />
