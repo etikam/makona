@@ -242,6 +242,12 @@ CORS_ALLOW_METHODS = [
 # Preflight cache duration (24 heures)
 CORS_PREFLIGHT_MAX_AGE = 86400
 
+# Debug: Log CORS configuration (en développement uniquement)
+if DEBUG:
+    print(f"[CORS DEBUG] CORS_ALLOWED_ORIGINS: {CORS_ALLOWED_ORIGINS}")
+    print(f"[CORS DEBUG] FRONTEND_DOMAIN: {FRONTEND_DOMAIN}")
+    print(f"[CORS DEBUG] CORS_ALLOW_CREDENTIALS: {CORS_ALLOW_CREDENTIALS}")
+
 CSRF_TRUSTED_ORIGINS = sorted(set(_CSRF_TRUSTED + _maybe_https(FRONTEND_DOMAIN) + _maybe_https(API_DOMAIN)))
 
 # Let Django know it's behind Traefik/Proxy using HTTPS

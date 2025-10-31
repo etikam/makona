@@ -3,6 +3,7 @@ URLs pour l'app accounts
 """
 from django.urls import path
 from . import views
+from .cors_debug import cors_debug_view
 
 app_name = 'accounts'
 
@@ -26,4 +27,7 @@ urlpatterns = [
     
     # Device fingerprint
     path('device/fingerprint/', views.DeviceFingerprintView.as_view(), name='device_fingerprint'),
+    
+    # Debug CORS
+    path('cors-debug/', cors_debug_view, name='cors_debug'),
 ]

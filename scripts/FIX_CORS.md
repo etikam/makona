@@ -122,6 +122,31 @@ Vous devriez voir les headers :
 - `Access-Control-Allow-Credentials: true`
 - `Access-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, OPTIONS`
 
+## Diagnostic avec le script de test
+
+Un script de diagnostic est disponible pour vérifier la configuration :
+
+```bash
+# Copier le script dans le conteneur
+docker cp scripts/check_cors.py makona_backend:/app/check_cors.py
+
+# Exécuter le diagnostic
+docker exec makona_backend python check_cors.py
+```
+
+## Tester l'endpoint de diagnostic CORS
+
+Un endpoint de diagnostic a été ajouté à `/api/auth/cors-debug/` :
+
+```bash
+# Tester avec curl
+curl -X GET https://etyapimakona.n-it.org/api/auth/cors-debug/ \
+  -H "Origin: https://makona-awards.n-it.org" \
+  -v
+```
+
+Cet endpoint devrait renvoyer la configuration CORS actuelle.
+
 ## Dépannage
 
 ### Si les erreurs persistent après ces étapes :
@@ -129,9 +154,11 @@ Vous devriez voir les headers :
 1. **Vérifier que Traefik ne bloque pas les requêtes OPTIONS**
    - Les requêtes OPTIONS (preflight) doivent passer jusqu'à Django
    - Vérifier les logs Traefik : `docker logs makona_traefik_prod`
+   - Si Traefik bloque OPTIONS, il faut configurer des headers CORS dans Traefik
 
 2. **Vérifier que le middleware CORS est bien en première position**
    - Le fichier `config/settings.py` doit avoir `corsheaders.middleware.CorsMiddleware` en premier dans `MIDDLEWARE`
+   - Vérifier avec : `docker exec makona_backend python check_cors.py`
 
 3. **Vider le cache du navigateur**
    - Les erreurs CORS peuvent être mises en cache
@@ -143,7 +170,22 @@ Vous devriez voir les headers :
    ```
 
 5. **Forcer le rechargement des settings Django**
-   - Redémarrer complètement le conteneur : `docker-compose -p app restart backend`
+   - **IMPORTANT** : Après modification du `.env`, il faut **reconstruire** le conteneur, pas seulement le redémarrer :
+   ```bash
+   # Arrêter
+   docker-compose -p app stop backend
+   
+   # Reconstruire (c'est crucial pour recharger les variables d'environnement)
+   docker-compose -p app build --no-cache backend
+   
+   # Redémarrer
+   docker-compose -p app up -d backend
+   ```
+
+6. **Vérifier que les variables sont bien dans le conteneur**
+   ```bash
+   docker exec makona_backend env | grep -E "CORS|FRONTEND|CSRF|ALLOWED"
+   ```
 
 ## Notes importantes
 
