@@ -33,6 +33,9 @@ urlpatterns = [
     # Admin API Endpoints
     path("api/admin/accounts/", include("accounts.admin_urls")),
     path("api/admin/candidates/", include("candidates.admin_urls")),
+    
+    # Settings API Endpoints
+    path("api/settings/", include("settings.urls")),
 ]
 
 # Servir les fichiers média en développement

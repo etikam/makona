@@ -3,11 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, Calendar, MapPin, ArrowRight, ChevronLeft, ChevronRight as ChevronRightIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-
-const images = [
-  { id: 1, alt: "Logo Makona Awards", text: "Logo officiel des Makona Awards" },
-  { id: 2, alt: "Affiche Makona Awards", text: "Affiche officielle de l'édition 2025" },
-];
+import settingsService from '@/services/settingsService';
 
 const SeaWaveAnimation = () => {
   return (
@@ -72,7 +68,44 @@ const SeaWaveAnimation = () => {
 const HeroSection = ({ onNavigate }) => {
   const [timeLeft, setTimeLeft] = useState({});
   const [[page, direction], setPage] = useState([0, 0]);
-  const imageIndex = page % images.length;
+  const [settings, setSettings] = useState(null);
+  const [carouselImages, setCarouselImages] = useState([]);
+  const [isCountdownActive, setIsCountdownActive] = useState(true);
+  
+  // Charger les paramètres et images du carousel
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const [settingsData, imagesData] = await Promise.all([
+          settingsService.getPublicSettings(),
+          settingsService.getActiveCarouselImages()
+        ]);
+        setSettings(settingsData);
+        
+        // Utiliser les images du backend ou les images par défaut
+        if (imagesData && imagesData.length > 0) {
+          setCarouselImages(imagesData);
+        } else {
+          // Images par défaut si aucune image dans le backend
+          setCarouselImages([
+            { id: 1, image_url: '/logo.jpg', alt_text: "Logo Makona Awards", title: "Logo officiel des Makona Awards" },
+            { id: 2, image_url: '/affiche.jpg', alt_text: "Affiche Makona Awards", title: "Affiche officielle de l'édition 2025" },
+          ]);
+        }
+      } catch (error) {
+        console.error('Error loading settings:', error);
+        // Utiliser les images par défaut en cas d'erreur
+        setCarouselImages([
+          { id: 1, image_url: '/logo.jpg', alt_text: "Logo Makona Awards", title: "Logo officiel des Makona Awards" },
+          { id: 2, image_url: '/affiche.jpg', alt_text: "Affiche Makona Awards", title: "Affiche officielle de l'édition 2025" },
+        ]);
+      }
+    };
+    
+    loadSettings();
+  }, []);
+
+  const imageIndex = page % (carouselImages.length || 1);
 
   // Decorative particles (non-blocking)
   const particles = useMemo(() => Array.from({ length: 18 }).map((_, i) => ({
@@ -87,26 +120,50 @@ const HeroSection = ({ onNavigate }) => {
     setPage([page + newDirection, newDirection]);
   };
 
+  // Chronomètre dynamique basé sur les paramètres
   useEffect(() => {
-    const targetDate = new Date('2025-12-28T00:00:00').getTime();
+    if (!settings || !settings.countdown_enabled || !settings.countdown_target_date) {
+      setIsCountdownActive(false);
+      return;
+    }
+
+    const targetDate = new Date(settings.countdown_target_date).getTime();
     const interval = setInterval(() => {
       const now = new Date().getTime();
       const distance = targetDate - now;
+      
+      if (distance <= 0) {
+        setIsCountdownActive(false);
+        clearInterval(interval);
+        return;
+      }
+      
+      setIsCountdownActive(true);
       setTimeLeft({
         days: Math.floor(distance / (1000 * 60 * 60 * 24)),
         hours: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
         minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
         seconds: Math.floor((distance % (1000 * 60)) / 1000)
       });
-      if (distance < 0) clearInterval(interval);
     }, 1000);
+    
     return () => clearInterval(interval);
-  }, []);
+  }, [settings]);
 
+  // Auto-play du carousel basé sur les paramètres
   useEffect(() => {
-    const slideInterval = setInterval(() => paginate(1), 5000);
+    if (!settings || !settings.hero_carousel_enabled || !settings.hero_carousel_auto_play || carouselImages.length <= 1) {
+      return;
+    }
+    
+    const interval = settings.hero_carousel_interval || 5000;
+    const slideInterval = setInterval(() => paginate(1), interval);
     return () => clearInterval(slideInterval);
-  }, [page]);
+  }, [page, settings, carouselImages.length]);
+
+  // Déterminer quel bouton afficher selon l'état du chronomètre
+  const showVoteButton = !isCountdownActive && settings?.countdown_enabled;
+  const showParticipateButton = isCountdownActive && settings?.countdown_enabled;
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20 pb-10 md:pt-0 md:pb-0">
@@ -218,54 +275,62 @@ const HeroSection = ({ onNavigate }) => {
               ))}
             </div>
 
-            {/* Bouton Participer - avant le chronomètre sur mobile */}
-            <div className="mb-6 lg:hidden flex justify-center">
-              <Button 
-                onClick={() => onNavigate('results')} 
-                className="btn-secondary w-fit px-4 py-2.5 rounded-full shadow-md hover:shadow-lg transition-all duration-300"
-              >
-                <span className="flex items-center justify-center gap-2">
-                  <span className="text-sm font-semibold">Participer</span>
-                </span>
-              </Button>
-            </div>
-
-            {/* Chronomètre - visible sur mobile après stats et Participer */}
-            <div className="mb-6 lg:hidden">
-              <div className="grid grid-cols-4 gap-2 w-full max-w-lg mx-auto">
-                {[{ label: 'Jours', value: timeLeft.days }, { label: 'Heures', value: timeLeft.hours }, { label: 'Minutes', value: timeLeft.minutes }, { label: 'Secondes', value: timeLeft.seconds }].map((item) => (
-                  <div key={item.label} className="card-glass p-3 text-center">
-                    <div className="font-bold text-gradient-gold text-[clamp(1.5rem,4vw,2rem)]">{(item.value || 0).toString().padStart(2, '0')}</div>
-                    <div className="text-gray-400 uppercase text-[clamp(0.6rem,1vw,0.75rem)]">{item.label}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Bouton Voter - dernier sur mobile */}
-            <div className="flex flex-wrap items-center gap-3 sm:gap-4 justify-center lg:justify-start mb-6 lg:mb-0">
-                <Button 
-                  onClick={() => onNavigate('vote')} 
-                  className="btn-primary group w-fit px-4 py-2.5 sm:px-6 md:px-8 sm:py-3.5 md:py-4 rounded-full sm:rounded-lg shadow-lg hover:shadow-xl transition-all duration-300"
-                >
-                  <span className="flex items-center justify-center gap-2">
-                    <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
-                    <span className="text-sm sm:text-base md:text-lg font-semibold">
-                      <span className="sm:hidden">Voter</span>
-                      <span className="hidden sm:inline">Voter Maintenant</span>
-                    </span>
-                    <ArrowRight className="hidden sm:block w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
-                  </span>
-                </Button>
-                {/* Bouton Participer - caché sur mobile, visible sur desktop */}
+            {/* Bouton Participer - avant le chronomètre sur mobile (si chrono actif) */}
+            {showParticipateButton && (
+              <div className="mb-6 lg:hidden flex justify-center">
                 <Button 
                   onClick={() => onNavigate('results')} 
-                  className="hidden lg:block btn-secondary w-fit px-4 py-2.5 sm:px-6 md:px-8 sm:py-3.5 md:py-4 rounded-full sm:rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
+                  className="btn-secondary w-fit px-4 py-2.5 rounded-full shadow-md hover:shadow-lg transition-all duration-300"
                 >
                   <span className="flex items-center justify-center gap-2">
-                    <span className="text-sm sm:text-base md:text-lg font-semibold">Participer</span>
+                    <span className="text-sm font-semibold">Participer</span>
                   </span>
                 </Button>
+              </div>
+            )}
+
+            {/* Chronomètre - visible sur mobile après stats et Participer */}
+            {settings?.countdown_enabled && isCountdownActive && (
+              <div className="mb-6 lg:hidden">
+                <div className="grid grid-cols-4 gap-2 w-full max-w-lg mx-auto">
+                  {[{ label: 'Jours', value: timeLeft.days }, { label: 'Heures', value: timeLeft.hours }, { label: 'Minutes', value: timeLeft.minutes }, { label: 'Secondes', value: timeLeft.seconds }].map((item) => (
+                    <div key={item.label} className="card-glass p-3 text-center">
+                      <div className="font-bold text-gradient-gold text-[clamp(1.5rem,4vw,2rem)]">{(item.value || 0).toString().padStart(2, '0')}</div>
+                      <div className="text-gray-400 uppercase text-[clamp(0.6rem,1vw,0.75rem)]">{item.label}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Boutons - dernier sur mobile */}
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4 justify-center lg:justify-start mb-6 lg:mb-0">
+                {showVoteButton && (
+                  <Button 
+                    onClick={() => onNavigate('vote')} 
+                    className="btn-primary group w-fit px-4 py-2.5 sm:px-6 md:px-8 sm:py-3.5 md:py-4 rounded-full sm:rounded-lg shadow-lg hover:shadow-xl transition-all duration-300"
+                  >
+                    <span className="flex items-center justify-center gap-2">
+                      <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
+                      <span className="text-sm sm:text-base md:text-lg font-semibold">
+                        <span className="sm:hidden">Voter</span>
+                        <span className="hidden sm:inline">Voter Maintenant</span>
+                      </span>
+                      <ArrowRight className="hidden sm:block w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
+                    </span>
+                  </Button>
+                )}
+                {/* Bouton Participer - visible sur desktop si chrono actif */}
+                {showParticipateButton && (
+                  <Button 
+                    onClick={() => onNavigate('results')} 
+                    className="hidden lg:block btn-secondary w-fit px-4 py-2.5 sm:px-6 md:px-8 sm:py-3.5 md:py-4 rounded-full sm:rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
+                  >
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="text-sm sm:text-base md:text-lg font-semibold">Participer</span>
+                    </span>
+                  </Button>
+                )}
             </div>
           </motion.div>
 
@@ -291,10 +356,14 @@ const HeroSection = ({ onNavigate }) => {
                         transition={{ x: { type: "spring", stiffness: 300, damping: 30 }, opacity: { duration: 0.2 } }}
                         className="absolute w-full h-full"
                     >
-                        <img className="w-full h-full object-cover" alt={images[imageIndex].alt} src={imageIndex === 0 ? "/logo.jpg" : "/affiche.jpg"} />
-                        <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
-                            <p className="text-white font-semibold">{images[imageIndex].text}</p>
-                        </div>
+                        {carouselImages.length > 0 && carouselImages[imageIndex] && (
+                          <>
+                            <img className="w-full h-full object-cover" alt={carouselImages[imageIndex].alt_text || carouselImages[imageIndex].title} src={carouselImages[imageIndex].image_url} />
+                            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
+                                <p className="text-white font-semibold">{carouselImages[imageIndex].title || carouselImages[imageIndex].alt_text}</p>
+                            </div>
+                          </>
+                        )}
                     </motion.div>
                 </AnimatePresence>
                 <button onClick={() => paginate(-1)} className="absolute top-1/2 left-2 -translate-y-1/2 bg-white/10 p-2 rounded-full hover:bg-white/20 transition-colors z-20">
@@ -306,14 +375,16 @@ const HeroSection = ({ onNavigate }) => {
             </div>
             
             {/* Chronomètre - caché sur mobile (visible dans la colonne gauche), visible sur desktop */}
-            <div className="hidden lg:grid grid-cols-4 gap-2 w-full max-w-lg">
-              {[{ label: 'Jours', value: timeLeft.days }, { label: 'Heures', value: timeLeft.hours }, { label: 'Minutes', value: timeLeft.minutes }, { label: 'Secondes', value: timeLeft.seconds }].map((item) => (
-                <div key={item.label} className="card-glass p-3 text-center">
-                  <div className="font-bold text-gradient-gold text-[clamp(1.5rem,4vw,2rem)]">{(item.value || 0).toString().padStart(2, '0')}</div>
-                  <div className="text-gray-400 uppercase text-[clamp(0.6rem,1vw,0.75rem)]">{item.label}</div>
-                </div>
-              ))}
-            </div>
+            {settings?.countdown_enabled && isCountdownActive && (
+              <div className="hidden lg:grid grid-cols-4 gap-2 w-full max-w-lg">
+                {[{ label: 'Jours', value: timeLeft.days }, { label: 'Heures', value: timeLeft.hours }, { label: 'Minutes', value: timeLeft.minutes }, { label: 'Secondes', value: timeLeft.seconds }].map((item) => (
+                  <div key={item.label} className="card-glass p-3 text-center">
+                    <div className="font-bold text-gradient-gold text-[clamp(1.5rem,4vw,2rem)]">{(item.value || 0).toString().padStart(2, '0')}</div>
+                    <div className="text-gray-400 uppercase text-[clamp(0.6rem,1vw,0.75rem)]">{item.label}</div>
+                  </div>
+                ))}
+              </div>
+            )}
           </motion.div>
         </div>
       </div>

@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     "candidates",
     "votes",
     "dashboard",
+    "settings",
 ]
 
 MIDDLEWARE = [

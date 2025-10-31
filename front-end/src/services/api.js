@@ -15,10 +15,13 @@ class ApiService {
   /**
    * Configure les headers par défaut
    */
-  getHeaders(includeAuth = true) {
-    const headers = {
-      'Content-Type': 'application/json',
-    };
+  getHeaders(includeAuth = true, isFormData = false) {
+    const headers = {};
+    
+    // Ne pas définir Content-Type pour FormData (le navigateur le fait automatiquement avec le boundary)
+    if (!isFormData) {
+      headers['Content-Type'] = 'application/json';
+    }
 
     return headers;
   }
@@ -58,11 +61,17 @@ class ApiService {
    */
   async request(endpoint, options = {}) {
     const url = `${this.baseURL}${endpoint}`;
+    const isFormData = options.body instanceof FormData;
     const config = {
-      headers: this.getHeaders(options.includeAuth !== false),
+      headers: this.getHeaders(options.includeAuth !== false, isFormData),
       credentials: 'include', // Important pour les cookies de session
       ...options,
     };
+    
+    // Supprimer Content-Type si FormData (le navigateur le définira avec le boundary)
+    if (isFormData && config.headers && config.headers['Content-Type']) {
+      delete config.headers['Content-Type'];
+    }
 
     try {
       const response = await fetch(url, config);
@@ -89,10 +98,6 @@ class ApiService {
     // Si c'est FormData, ne pas stringify et laisser le navigateur gérer les headers
     if (data instanceof FormData) {
       requestOptions.body = data;
-      // Ne pas définir Content-Type pour FormData, le navigateur le fera automatiquement
-      if (requestOptions.headers) {
-        delete requestOptions.headers['Content-Type'];
-      }
     } else {
       requestOptions.body = JSON.stringify(data);
     }
@@ -109,10 +114,6 @@ class ApiService {
     // Si c'est FormData, ne pas stringify et laisser le navigateur gérer les headers
     if (data instanceof FormData) {
       requestOptions.body = data;
-      // Ne pas définir Content-Type pour FormData, le navigateur le fera automatiquement
-      if (requestOptions.headers) {
-        delete requestOptions.headers['Content-Type'];
-      }
     } else {
       requestOptions.body = JSON.stringify(data);
     }
@@ -129,10 +130,6 @@ class ApiService {
     // Si c'est FormData, ne pas stringify et laisser le navigateur gérer les headers
     if (data instanceof FormData) {
       requestOptions.body = data;
-      // Ne pas définir Content-Type pour FormData, le navigateur le fera automatiquement
-      if (requestOptions.headers) {
-        delete requestOptions.headers['Content-Type'];
-      }
     } else {
       requestOptions.body = JSON.stringify(data);
     }
