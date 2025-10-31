@@ -21,3 +21,4 @@ urlpatterns = [
     path('admin/hall-of-fame/<int:pk>/', views.HallOfFameDetailView.as_view(), name='hall-of-fame-detail'),
 ]
 
+
