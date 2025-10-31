@@ -116,6 +116,35 @@ docker-compose -p app logs --tail 50 backend
 docker-compose -p app logs -f backend
 ```
 
+## 💾 IMPORTANT : Persistance des données
+
+⚠️ **Ne jamais utiliser `down -v`** sauf pour un nettoyage complet !
+
+```bash
+# ✅ CORRECT - Préserve les volumes (données)
+docker-compose -p app down
+
+# ❌ INCORRECT - Supprime les volumes (perte de données)
+docker-compose -p app down -v
+```
+
+Les volumes nommés (`makona_postgres_data`, `makona_media`, etc.) sont automatiquement préservés avec `down` (sans `-v`).
+
+### Vérifier la persistance
+
+```bash
+# Vérifier que PostgreSQL est utilisé (pas SQLite)
+docker-compose -p app exec backend python manage.py shell
+# >>> from django.conf import settings
+# >>> settings.DATABASES['default']['ENGINE']
+# 'django.db.backends.postgresql'  # ✅ Doit afficher ceci
+
+# Vérifier les volumes
+docker volume ls | grep makona
+```
+
+📖 **Documentation complète** : Voir [DATABASE_PERSISTENCE.md](./DATABASE_PERSISTENCE.md)
+
 ## 🔧 Gestion des services
 
 ### Reconstruire les images
