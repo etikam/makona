@@ -71,6 +71,31 @@ docker-compose ps
 docker volume ls | grep makona
 ```
 
+## ⚠️ Avertissement sur "makona_traefik_prod"
+
+**C'est normal** si vous voyez cet avertissement lors du démarrage des services applicatifs :
+
+```
+WARNING: Found orphan containers (makona_traefik_prod) for this project.
+```
+
+### Pourquoi cet avertissement ?
+
+L'architecture utilise **deux fichiers compose différents** :
+- `docker-compose.traefik.yml` : Gère uniquement Traefik
+- `docker-compose.yml` : Gère les services applicatifs (backend, frontend, db)
+
+Quand vous utilisez `docker-compose up -d` (avec `docker-compose.yml`), Docker détecte `makona_traefik_prod` qui a été créé avec l'autre fichier compose et le considère comme "orphelin" dans ce contexte.
+
+**Cet avertissement est inoffensif** et n'affecte pas le fonctionnement. Traefik continue de fonctionner normalement car :
+1. Il est géré séparément par `docker-compose.traefik.yml`
+2. Il est déjà en cours d'exécution
+3. Les services applicatifs se connectent correctement à Traefik via le réseau Docker
+
+### Ignorer l'avertissement
+
+Vous pouvez ignorer cet avertissement en toute sécurité. Il n'indique aucun problème.
+
 ## Vérification post-migration
 
 Après la migration, vérifiez que :

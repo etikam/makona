@@ -86,6 +86,8 @@ sleep 2
 # Démarrer les services avec docker-compose.yml (qui utilise Traefik)
 echo ""
 echo "🚀 Démarrage des services applicatifs..."
+echo "   ℹ️  Note: L'avertissement sur 'makona_traefik_prod' est normal et inoffensif"
+echo "      (Traefik est géré séparément par docker-compose.traefik.yml)"
 docker-compose up -d
 
 echo ""
