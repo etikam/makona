@@ -39,12 +39,13 @@ class CategoryAdminListView(generics.ListCreateAPIView):
     """
     Vue admin pour lister et créer des catégories
     """
-    queryset = Category.objects.all()
+    queryset = Category.objects.all().select_related('category_class')
     permission_classes = [permissions.AllowAny]  # Temporairement pour test
     
     def get_serializer_class(self):
         if self.request.method == 'GET':
-            return CategoryListSerializer
+            # Utiliser CategorySerializer pour avoir toutes les informations (file_requirements, awards, etc.)
+            return CategorySerializer
         return CategoryCreateUpdateSerializer
 
 

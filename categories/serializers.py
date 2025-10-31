@@ -75,17 +75,18 @@ class CategorySerializer(serializers.ModelSerializer):
     """
     file_requirements = serializers.SerializerMethodField()
     required_file_types = serializers.SerializerMethodField()
+    category_class_name = serializers.CharField(source='category_class.name', read_only=True)
     
     class Meta:
         model = Category
         fields = [
-            'id', 'category_class', 'name', 'slug', 'description',
+            'id', 'category_class', 'category_class_name', 'name', 'slug', 'description',
             'is_active', 'requires_photo', 'requires_video', 'requires_portfolio',
             'requires_audio', 'requires_documents', 'max_video_duration', 'max_audio_duration',
             'awards_trophy', 'awards_certificate', 'awards_monetary', 'awards_plaque',
             'file_requirements', 'required_file_types', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'slug', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'slug', 'category_class_name', 'created_at', 'updated_at']
     
     def get_file_requirements(self, obj):
         return obj.get_file_requirements()

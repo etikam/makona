@@ -268,10 +268,18 @@ const CandidatesManagement = () => {
   // Fonctions pour les candidatures
   const loadCategories = async () => {
     try {
+      // Charger les catégories depuis l'endpoint admin pour avoir toutes les informations
       const response = await categoryService.getCategories();
-      setCategories(response.results || response);
+      // Les catégories doivent inclure file_requirements, required_file_types, awards, etc.
+      const categoriesData = response.results || response;
+      setCategories(Array.isArray(categoriesData) ? categoriesData : []);
     } catch (error) {
       console.error('Erreur lors du chargement des catégories:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les catégories",
+        variant: "destructive"
+      });
     }
   };
 
@@ -293,33 +301,63 @@ const CandidatesManagement = () => {
     // Réinitialiser les erreurs
     setCandidatureErrors({});
     
+    // Debug
+    console.log('Données de candidature avant validation:', candidatureData);
+    console.log('Catégories disponibles:', categories.map(c => ({ id: c.id, name: c.name })));
+    
     // Validation côté client
     const errors = {};
     
-    if (!candidatureData.category) {
+    // Vérifier la catégorie (doit être non vide et non null)
+    const categoryValue = candidatureData.category;
+    console.log('Valeur de catégorie:', categoryValue, 'Type:', typeof categoryValue);
+    
+    if (!categoryValue || categoryValue === '' || categoryValue === null || categoryValue === undefined) {
       errors.category = "Veuillez sélectionner une catégorie";
+    } else {
+      // Vérifier que la catégorie existe dans la liste
+      const categoryExists = categories.some(cat => 
+        cat.id.toString() === categoryValue.toString() || 
+        cat.id === parseInt(categoryValue, 10)
+      );
+      
+      if (!categoryExists) {
+        console.error('Catégorie non trouvée dans la liste:', categoryValue);
+        errors.category = "Catégorie invalide";
+      }
     }
     
-    if (!candidatureData.description.trim()) {
-      errors.description = "Veuillez saisir une description";
+    // Vérifier la description (optionnelle mais si fournie, ne doit pas être vide)
+    if (candidatureData.description && !candidatureData.description.trim()) {
+      errors.description = "La description ne peut pas être vide si elle est fournie";
     }
     
     // Vérifier les fichiers requis
     const selectedCategory = categories.find(cat => cat.id.toString() === candidatureData.category);
     if (selectedCategory) {
-      if (selectedCategory.requires_photo && (!candidatureData.files.photo || candidatureData.files.photo.length === 0)) {
+      // Utiliser required_file_types si disponible, sinon utiliser les flags individuels
+      const requiredTypes = selectedCategory.required_file_types || [];
+      const fileRequirements = {
+        photo: selectedCategory.requires_photo || requiredTypes.includes('photo'),
+        video: selectedCategory.requires_video || requiredTypes.includes('video'),
+        audio: selectedCategory.requires_audio || requiredTypes.includes('audio'),
+        portfolio: selectedCategory.requires_portfolio || requiredTypes.includes('portfolio'),
+        documents: selectedCategory.requires_documents || requiredTypes.includes('documents')
+      };
+
+      if (fileRequirements.photo && (!candidatureData.files.photo || candidatureData.files.photo.length === 0)) {
         errors.photo = "Des photos sont requises pour cette catégorie";
       }
-      if (selectedCategory.requires_video && (!candidatureData.files.video || candidatureData.files.video.length === 0)) {
+      if (fileRequirements.video && (!candidatureData.files.video || candidatureData.files.video.length === 0)) {
         errors.video = "Des vidéos sont requises pour cette catégorie";
       }
-      if (selectedCategory.requires_audio && (!candidatureData.files.audio || candidatureData.files.audio.length === 0)) {
+      if (fileRequirements.audio && (!candidatureData.files.audio || candidatureData.files.audio.length === 0)) {
         errors.audio = "Des fichiers audio sont requis pour cette catégorie";
       }
-      if (selectedCategory.requires_portfolio && (!candidatureData.files.portfolio || candidatureData.files.portfolio.length === 0)) {
+      if (fileRequirements.portfolio && (!candidatureData.files.portfolio || candidatureData.files.portfolio.length === 0)) {
         errors.portfolio = "Un portfolio est requis pour cette catégorie";
       }
-      if (selectedCategory.requires_documents && (!candidatureData.files.documents || candidatureData.files.documents.length === 0)) {
+      if (fileRequirements.documents && (!candidatureData.files.documents || candidatureData.files.documents.length === 0)) {
         errors.documents = "Des documents sont requis pour cette catégorie";
       }
     }
@@ -330,10 +368,23 @@ const CandidatesManagement = () => {
     }
 
     try {
+      // Convertir la catégorie en nombre si c'est une chaîne
+      const categoryId = typeof candidatureData.category === 'string' 
+        ? parseInt(candidatureData.category, 10) 
+        : candidatureData.category;
+
+      // Vérifier que la conversion a réussi
+      if (isNaN(categoryId)) {
+        setCandidatureErrors({ category: "Catégorie invalide" });
+        return;
+      }
+
       const candidatureDataToSend = {
         candidate: selectedCandidate.id,
-        category: candidatureData.category,
-        description: candidatureData.description
+        category: categoryId,
+        ...(candidatureData.description && candidatureData.description.trim() && {
+          description: candidatureData.description.trim()
+        })
       };
 
       // Créer la candidature
@@ -366,15 +417,83 @@ const CandidatesManagement = () => {
       resetCandidatureForm();
       loadCandidates(); // Recharger pour mettre à jour les statistiques
     } catch (error) {
+      console.error('Erreur création candidature:', error);
+      
       // Gérer les erreurs de validation du serveur
-      if (error.message && error.message.includes('file_type')) {
-        setCandidatureErrors({ file_type: 'Le type de fichier est obligatoire' });
-      } else if (error.message && error.message.includes('file')) {
-        setCandidatureErrors({ file: 'Aucun fichier n\'a été soumis' });
-      } else if (error.message && error.message.includes('category')) {
-        setCandidatureErrors({ category: 'La catégorie est obligatoire' });
-      } else if (error.message && error.message.includes('description')) {
-        setCandidatureErrors({ description: 'La description est obligatoire' });
+      // Les erreurs Django REST Framework peuvent être dans error.data ou error.response.data
+      let errorMessage = error.message || '';
+      let serverErrors = {};
+      
+      // Essayer de récupérer les erreurs détaillées du serveur
+      const errorData = error.data || (error.response && error.response.data);
+      
+      if (errorData && typeof errorData === 'object') {
+        // Erreurs de champ spécifiques (format Django REST Framework)
+        Object.keys(errorData).forEach(field => {
+          if (field === 'non_field_errors' || field === 'detail' || field === 'message') {
+            return; // Ignorer les champs spéciaux
+          }
+          
+          if (Array.isArray(errorData[field])) {
+            serverErrors[field] = errorData[field][0] || errorData[field].join(', ');
+          } else if (typeof errorData[field] === 'string') {
+            serverErrors[field] = errorData[field];
+          } else if (typeof errorData[field] === 'object') {
+            // Gérer les erreurs imbriquées
+            const nestedErrors = Object.values(errorData[field]).flat();
+            if (nestedErrors.length > 0) {
+              serverErrors[field] = nestedErrors[0];
+            }
+          }
+        });
+        
+        // Erreurs générales (non_field_errors)
+        if (errorData.non_field_errors && errorData.non_field_errors.length > 0) {
+          errorMessage = errorData.non_field_errors[0];
+        }
+      }
+      
+      // Utiliser les erreurs du serveur si disponibles, sinon les erreurs génériques
+      if (Object.keys(serverErrors).length > 0) {
+        setCandidatureErrors(serverErrors);
+        // Afficher aussi un toast pour les erreurs importantes
+        if (serverErrors.category && (serverErrors.category.includes('déjà') || serverErrors.category.includes('unique'))) {
+          toast({
+            title: "Candidature déjà existante",
+            description: serverErrors.category,
+            variant: "destructive"
+          });
+        }
+      } else if (errorMessage) {
+        // Erreurs génériques basées sur le message
+        if (errorMessage.includes('ensemble unique') || errorMessage.includes('unique') || errorMessage.includes('déjà')) {
+          setCandidatureErrors({ 
+            category: "Ce candidat a déjà une candidature pour cette catégorie. Veuillez choisir une autre catégorie."
+          });
+          toast({
+            title: "Candidature déjà existante",
+            description: "Ce candidat a déjà une candidature pour cette catégorie. Veuillez choisir une autre catégorie.",
+            variant: "destructive"
+          });
+        } else if (errorMessage.includes('file_type') || errorMessage.includes('fichier')) {
+          setCandidatureErrors({ files: errorMessage });
+        } else if (errorMessage.includes('category') || errorMessage.includes('catégorie')) {
+          setCandidatureErrors({ category: errorMessage });
+        } else if (errorMessage.includes('description')) {
+          setCandidatureErrors({ description: errorMessage });
+        } else if (errorMessage.includes('candidat') || errorMessage.includes('candidate')) {
+          toast({
+            title: "Erreur",
+            description: errorMessage,
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Erreur",
+            description: errorMessage || "Impossible de créer la candidature",
+            variant: "destructive"
+          });
+        }
       } else {
         toast({
           title: "Erreur",
@@ -431,7 +550,21 @@ const CandidatesManagement = () => {
     return colors[fileType] || 'text-gray-400';
   };
 
-  const openCandidatureModal = () => {
+  const openCandidatureModal = (candidate = null) => {
+    // Si un candidat est fourni, l'utiliser, sinon utiliser selectedCandidate
+    if (candidate) {
+      setSelectedCandidate(candidate);
+    }
+    
+    if (!selectedCandidate && !candidate) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez sélectionner un candidat",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setCandidatureErrors({});
     setShowCandidatureModal(true);
     loadCategories();
@@ -675,10 +808,20 @@ const CandidatesManagement = () => {
                     <td className="p-4">
                       <div className="flex justify-end gap-2">
                         <Button
+                          onClick={() => openCandidatureModal(candidate)}
+                          size="icon"
+                          variant="ghost"
+                          className="text-yellow-400 hover:bg-yellow-500/10 hover:text-yellow-300"
+                          title="Créer une candidature"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </Button>
+                        <Button
                           onClick={() => openDetailModal(candidate)}
                           size="icon"
                           variant="ghost"
                           className="text-blue-400 hover:bg-blue-500/10 hover:text-blue-300"
+                          title="Voir les détails"
                         >
                           <Eye className="w-4 h-4" />
                         </Button>
@@ -687,6 +830,7 @@ const CandidatesManagement = () => {
                           size="icon"
                           variant="ghost"
                           className="text-green-400 hover:bg-green-500/10 hover:text-green-300"
+                          title="Modifier"
                         >
                           <Edit className="w-4 h-4" />
                         </Button>
@@ -695,6 +839,7 @@ const CandidatesManagement = () => {
                           size="icon"
                           variant="ghost"
                           className="text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                          title="Supprimer"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -1146,7 +1291,10 @@ const CandidatesManagement = () => {
                     Fermer
                   </Button>
                   <Button
-                    onClick={openCandidatureModal}
+                    onClick={() => {
+                      setShowDetailModal(false);
+                      openCandidatureModal(selectedCandidate);
+                    }}
                     className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white"
                   >
                     <Plus className="w-4 h-4 mr-2" />
@@ -1225,26 +1373,25 @@ const CandidatesManagement = () => {
                   <div>
                     <Label htmlFor="category" className="text-white">Catégorie *</Label>
                     <Select 
-                      value={candidatureData.category} 
+                      value={candidatureData.category || ''} 
                       onValueChange={(value) => {
+                        console.log('Catégorie sélectionnée:', value, 'Type:', typeof value);
                         handleCategoryChange(value);
                         // Effacer l'erreur quand l'utilisateur sélectionne
-                        if (candidatureErrors.category) {
-                          setCandidatureErrors(prev => ({ ...prev, category: '' }));
-                        }
+                        setCandidatureErrors(prev => ({ ...prev, category: '' }));
                       }}
                     >
                       <SelectTrigger className={candidatureErrors.category ? 'border-red-500' : ''}>
                         <SelectValue placeholder="Sélectionner une catégorie" />
                       </SelectTrigger>
                       <SelectContent>
-                        {categories.map(category => (
+                        {categories.filter(cat => cat.is_active).map(category => (
                           <SelectItem key={category.id} value={category.id.toString()}>
                             <div className="flex items-center justify-between w-full">
                               <span className="flex-1">{category.name}</span>
                               {category.category_class && (
                                 <Badge variant="outline" className="text-xs ml-2 flex-shrink-0">
-                                  {category.category_class.name}
+                                  {category.category_class.name || category.category_class_name}
                                 </Badge>
                               )}
                             </div>
@@ -1256,6 +1403,75 @@ const CandidatesManagement = () => {
                       <p className="text-red-400 text-sm mt-1">{candidatureErrors.category}</p>
                     )}
                   </div>
+
+                  {/* Informations de la catégorie sélectionnée */}
+                  {candidatureData.category && (() => {
+                    const selectedCategory = categories.find(cat => cat.id.toString() === candidatureData.category);
+                    if (!selectedCategory) return null;
+
+                    const awards = [];
+                    if (selectedCategory.awards_trophy) awards.push({ type: 'trophy', label: '🏆 Trophée', color: 'text-yellow-400' });
+                    if (selectedCategory.awards_certificate) awards.push({ type: 'certificate', label: '📜 Satisfecit', color: 'text-blue-400' });
+                    if (selectedCategory.awards_monetary) awards.push({ type: 'monetary', label: '💰 Primes monétaires', color: 'text-green-400' });
+                    if (selectedCategory.awards_plaque) awards.push({ type: 'plaque', label: '🪧 Plaque commémorative', color: 'text-purple-400' });
+
+                    return (
+                      <div className="bg-blue-950/30 border border-blue-500/30 rounded-xl p-4 space-y-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Award className="w-5 h-5 text-blue-400" />
+                          <h4 className="text-lg font-semibold text-white">Informations de la catégorie</h4>
+                        </div>
+                        
+                        {/* Description */}
+                        {selectedCategory.description && (
+                          <p className="text-sm text-gray-300">{selectedCategory.description}</p>
+                        )}
+
+                        {/* Types de prix */}
+                        {awards.length > 0 && (
+                          <div>
+                            <p className="text-xs text-gray-400 mb-2">Types de prix attribués :</p>
+                            <div className="flex flex-wrap gap-2">
+                              {awards.map((award, idx) => (
+                                <Badge key={idx} variant="outline" className={`${award.color} border-current`}>
+                                  {award.label}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Exigences de fichiers */}
+                        {selectedCategory.required_file_types && selectedCategory.required_file_types.length > 0 && (
+                          <div>
+                            <p className="text-xs text-gray-400 mb-2">Fichiers requis :</p>
+                            <div className="flex flex-wrap gap-2">
+                              {selectedCategory.required_file_types.map((fileType, idx) => (
+                                <Badge key={idx} variant="outline" className="text-yellow-300 border-yellow-300/50">
+                                  {getFileIcon(fileType)} {fileType.charAt(0).toUpperCase() + fileType.slice(1)}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Limites de durée */}
+                        {(selectedCategory.max_video_duration || selectedCategory.max_audio_duration) && (
+                          <div>
+                            <p className="text-xs text-gray-400 mb-1">Limites de durée :</p>
+                            <div className="space-y-1">
+                              {selectedCategory.max_video_duration && (
+                                <p className="text-xs text-gray-300">📹 Vidéo max : {Math.floor(selectedCategory.max_video_duration / 60)} min</p>
+                              )}
+                              {selectedCategory.max_audio_duration && (
+                                <p className="text-xs text-gray-300">🎵 Audio max : {Math.floor(selectedCategory.max_audio_duration / 60)} min</p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   <div>
                     <Label htmlFor="description" className="text-white">Description</Label>
@@ -1284,15 +1500,42 @@ const CandidatesManagement = () => {
                   const selectedCategory = categories.find(cat => cat.id.toString() === candidatureData.category);
                   if (!selectedCategory) return null;
 
+                  // Utiliser required_file_types si disponible, sinon utiliser les flags individuels
+                  const requiredTypes = selectedCategory.required_file_types || [];
+                  const fileRequirements = {
+                    photo: selectedCategory.requires_photo || requiredTypes.includes('photo'),
+                    video: selectedCategory.requires_video || requiredTypes.includes('video'),
+                    audio: selectedCategory.requires_audio || requiredTypes.includes('audio'),
+                    portfolio: selectedCategory.requires_portfolio || requiredTypes.includes('portfolio'),
+                    documents: selectedCategory.requires_documents || requiredTypes.includes('documents')
+                  };
+
                   const fileTypes = [
-                    { key: 'photo', label: 'Photos', required: selectedCategory.requires_photo },
-                    { key: 'video', label: 'Vidéos', required: selectedCategory.requires_video },
-                    { key: 'audio', label: 'Audio', required: selectedCategory.requires_audio },
-                    { key: 'portfolio', label: 'Portfolio', required: selectedCategory.requires_portfolio },
-                    { key: 'documents', label: 'Documents', required: selectedCategory.requires_documents }
+                    { key: 'photo', label: 'Photos', required: fileRequirements.photo },
+                    { key: 'video', label: 'Vidéos', required: fileRequirements.video },
+                    { key: 'audio', label: 'Audio', required: fileRequirements.audio },
+                    { key: 'portfolio', label: 'Portfolio', required: fileRequirements.portfolio },
+                    { key: 'documents', label: 'Documents', required: fileRequirements.documents }
                   ].filter(fileType => fileType.required);
 
                   if (fileTypes.length === 0) return null;
+
+                  // Extensions autorisées selon le type
+                  const allowedExtensions = {
+                    photo: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff'],
+                    video: ['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm', 'mkv', 'm4v'],
+                    audio: ['mp3', 'wav', 'flac', 'aac', 'ogg', 'wma', 'm4a'],
+                    portfolio: ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'zip', 'rar', '7z'],
+                    documents: ['pdf', 'doc', 'docx', 'txt', 'rtf', 'odt', 'xls', 'xlsx', 'ppt', 'pptx']
+                  };
+
+                  const getAcceptString = (fileType) => {
+                    const extensions = allowedExtensions[fileType] || [];
+                    if (fileType === 'photo') return 'image/*';
+                    if (fileType === 'video') return 'video/*';
+                    if (fileType === 'audio') return 'audio/*';
+                    return extensions.map(ext => `.${ext}`).join(',');
+                  };
 
                   return (
                     <div className="space-y-4">
@@ -1314,11 +1557,7 @@ const CandidatesManagement = () => {
                               <input
                                 type="file"
                                 multiple
-                                accept={fileType.key === 'photo' ? 'image/*' : 
-                                       fileType.key === 'video' ? 'video/*' :
-                                       fileType.key === 'audio' ? 'audio/*' :
-                                       fileType.key === 'portfolio' ? '.pdf,.doc,.docx,.txt' :
-                                       '.pdf,.doc,.docx,.txt'}
+                                accept={getAcceptString(fileType.key)}
                                 onChange={(e) => {
                                   handleFileChange(fileType.key, Array.from(e.target.files));
                                   // Effacer l'erreur quand l'utilisateur sélectionne des fichiers
@@ -1340,12 +1579,19 @@ const CandidatesManagement = () => {
                                   Cliquez pour sélectionner des {fileType.label.toLowerCase()}
                                 </p>
                                 <p className="text-gray-500 text-xs text-center">
-                                  {fileType.key === 'photo' ? 'JPG, PNG, GIF' :
-                                   fileType.key === 'video' ? 'MP4, AVI, MOV' :
-                                   fileType.key === 'audio' ? 'MP3, WAV, M4A' :
-                                   fileType.key === 'portfolio' ? 'PDF, DOC, DOCX, TXT' :
-                                   'PDF, DOC, DOCX, TXT'}
+                                  {allowedExtensions[fileType.key]?.map(ext => ext.toUpperCase()).join(', ') || 'Tous formats'}
                                 </p>
+                                {/* Afficher la limite de durée si applicable */}
+                                {fileType.key === 'video' && selectedCategory.max_video_duration && (
+                                  <p className="text-orange-400 text-xs text-center mt-1">
+                                    Durée max : {Math.floor(selectedCategory.max_video_duration / 60)} min
+                                  </p>
+                                )}
+                                {fileType.key === 'audio' && selectedCategory.max_audio_duration && (
+                                  <p className="text-orange-400 text-xs text-center mt-1">
+                                    Durée max : {Math.floor(selectedCategory.max_audio_duration / 60)} min
+                                  </p>
+                                )}
                               </label>
                             </div>
                             

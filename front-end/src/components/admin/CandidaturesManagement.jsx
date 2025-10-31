@@ -44,12 +44,11 @@ const CandidaturesManagement = () => {
       const params = {
         page: currentPage,
         page_size: 20,
-        status: 'pending', // Filtrer automatiquement les candidatures en attente
+        status: 'pending', // Filtrer automatiquement les candidatures en attente (non validées)
         ...filters
       };
       
       // Nettoyer les paramètres de filtre
-      if (params.status === 'all') delete params.status;
       if (params.category === 'all') delete params.category;
       
       const response = await adminService.getCandidatures(params);

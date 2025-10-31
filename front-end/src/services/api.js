@@ -33,27 +33,70 @@ class ApiService {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       
+      // Créer un objet d'erreur enrichi avec les données de réponse
+      const error = new Error(errorData.detail || errorData.message || `HTTP ${response.status}`);
+      
+      // Ajouter les données d'erreur pour un traitement ultérieur
+      error.response = response;
+      error.data = errorData;
+      error.status = response.status;
+      
       // Gérer les erreurs de validation Django REST Framework
       if (errorData.non_field_errors && errorData.non_field_errors.length > 0) {
-        throw new Error(errorData.non_field_errors[0]);
+        error.message = errorData.non_field_errors[0];
       }
       
-      // Gérer les erreurs de champ spécifiques
-      if (typeof errorData === 'object' && !errorData.detail && !errorData.message) {
-        const fieldErrors = Object.values(errorData).flat();
-        if (fieldErrors.length > 0) {
-          throw new Error(fieldErrors[0]);
+      // Gérer les erreurs de champ spécifiques (Django REST Framework format)
+      if (typeof errorData === 'object' && !errorData.detail && !errorData.message && !errorData.non_field_errors) {
+        // Extraire toutes les erreurs de champs
+        const fieldErrors = {};
+        Object.keys(errorData).forEach(field => {
+          if (Array.isArray(errorData[field])) {
+            fieldErrors[field] = errorData[field];
+          } else if (typeof errorData[field] === 'string' || typeof errorData[field] === 'object') {
+            fieldErrors[field] = errorData[field];
+          }
+        });
+        
+        // Si on a des erreurs de champs, utiliser la première comme message principal
+        const firstField = Object.keys(fieldErrors)[0];
+        if (firstField && Array.isArray(fieldErrors[firstField])) {
+          error.message = fieldErrors[firstField][0];
+        } else if (firstField && typeof fieldErrors[firstField] === 'string') {
+          error.message = fieldErrors[firstField];
         }
       }
       
-      throw new Error(errorData.detail || errorData.message || `HTTP ${response.status}`);
+      throw error;
     }
 
-    const contentType = response.headers.get('content-type');
-    if (contentType && contentType.includes('application/json')) {
-      return await response.json();
+    // Gérer les réponses vides (204 No Content)
+    if (response.status === 204) {
+      // Pour les réponses 204 (No Content), il n'y a pas de contenu
+      return null;
     }
-    return response;
+    
+    const contentType = response.headers.get('content-type');
+    
+    // Si c'est du JSON, essayer de parser
+    if (contentType && contentType.includes('application/json')) {
+      try {
+        return await response.json();
+      } catch (error) {
+        // Si le parsing échoue (réponse vide), retourner null au lieu de lever une erreur
+        console.warn('Impossible de parser la réponse JSON (réponse vide?):', error);
+        return null;
+      }
+    }
+    
+    // Si ce n'est pas du JSON, essayer de récupérer le texte
+    try {
+      const text = await response.text();
+      return text && text.trim() !== '' ? text : null;
+    } catch (error) {
+      // Si l'extraction du texte échoue, retourner null
+      return null;
+    }
   }
 
   /**

@@ -73,18 +73,46 @@ class AdminCandidatureCreateSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Candidature
-        fields = ['candidate', 'category']
+        fields = ['candidate', 'category', 'description']
+    
+    def validate_candidate(self, value):
+        """Valider le candidat"""
+        if not value:
+            raise serializers.ValidationError("Le candidat est obligatoire")
+        if not hasattr(value, 'is_candidate') or not value.is_candidate:
+            raise serializers.ValidationError("Le candidat spécifié n'est pas valide")
+        return value
+    
+    def validate_category(self, value):
+        """Valider la catégorie"""
+        if not value:
+            raise serializers.ValidationError("La catégorie est obligatoire")
+        if not value.is_active:
+            raise serializers.ValidationError("La catégorie spécifiée n'est pas active")
+        return value
     
     def validate(self, data):
         # Vérifier que le candidat existe et est bien un candidat
         candidate = data.get('candidate')
-        if not candidate or not candidate.is_candidate:
-            raise serializers.ValidationError("Le candidat spécifié n'est pas valide")
+        if not candidate:
+            raise serializers.ValidationError({
+                'candidate': ["Le candidat est obligatoire"]
+            })
+        if not hasattr(candidate, 'is_candidate') or not candidate.is_candidate:
+            raise serializers.ValidationError({
+                'candidate': ["Le candidat spécifié n'est pas valide"]
+            })
         
         # Vérifier que la catégorie est active
         category = data.get('category')
-        if not category or not category.is_active:
-            raise serializers.ValidationError("La catégorie spécifiée n'est pas active")
+        if not category:
+            raise serializers.ValidationError({
+                'category': ["La catégorie est obligatoire"]
+            })
+        if not category.is_active:
+            raise serializers.ValidationError({
+                'category': ["La catégorie spécifiée n'est pas active"]
+            })
         
         # Vérifier qu'il n'y a pas déjà une candidature pour cette catégorie
         existing = Candidature.objects.filter(
@@ -93,9 +121,9 @@ class AdminCandidatureCreateSerializer(serializers.ModelSerializer):
         ).exists()
         
         if existing:
-            raise serializers.ValidationError(
-                "Ce candidat a déjà une candidature pour cette catégorie"
-            )
+            raise serializers.ValidationError({
+                'category': ["Ce candidat a déjà une candidature pour cette catégorie. Veuillez choisir une autre catégorie ou modifier la candidature existante."]
+            })
         
         return data
 

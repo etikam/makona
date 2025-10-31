@@ -29,7 +29,7 @@ const AdminCandidaturesManagement = () => {
   const [pagination, setPagination] = useState({});
   const [filters, setFilters] = useState({
     search: '',
-    status: 'all',
+    status: 'approved', // Filtrer automatiquement les candidatures approuvées
     category: 'all',
     candidate: 'all',
     published: 'all'
@@ -61,7 +61,7 @@ const AdminCandidaturesManagement = () => {
       const response = await adminService.getCandidatures({
         page: currentPage,
         search: filters.search,
-        status: filters.status !== 'all' ? filters.status : undefined,
+        status: 'approved', // Toujours filtrer par candidatures approuvées
         category: filters.category !== 'all' ? filters.category : undefined,
         candidate: filters.candidate !== 'all' ? filters.candidate : undefined,
         published: filters.published !== 'all' ? filters.published === 'true' : undefined
@@ -273,7 +273,7 @@ const AdminCandidaturesManagement = () => {
 
       {/* Filtres */}
       <div className="bg-gray-900/95 backdrop-blur-lg border border-gray-700/50 rounded-2xl p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <Input
@@ -284,18 +284,6 @@ const AdminCandidaturesManagement = () => {
             />
           </div>
           
-          <Select value={filters.status} onValueChange={(value) => handleFilterChange('status', value)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Statut" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tous les statuts</SelectItem>
-              <SelectItem value="pending">En attente</SelectItem>
-              <SelectItem value="approved">Approuvées</SelectItem>
-              <SelectItem value="rejected">Rejetées</SelectItem>
-            </SelectContent>
-          </Select>
-
           <Select value={filters.category} onValueChange={(value) => handleFilterChange('category', value)}>
             <SelectTrigger>
               <SelectValue placeholder="Catégorie" />
