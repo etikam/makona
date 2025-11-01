@@ -22,7 +22,10 @@ import CategoriesSection from '@/components/home/CategoriesSection';
           <div>
             <HeroSection onNavigate={onNavigate} />
             <CountdownSection onNavigate={onNavigate} />
-            <CategoriesSection onNavigateToCategory={(category) => onNavigate(`/vote/${category.id}`)} />
+            <CategoriesSection 
+              onNavigateToCategory={(category) => onNavigate(`/vote/${category.id}`)}
+              onNavigate={onNavigate}
+            />
             <WinnersSection />
             <HallOfFameSection />
             <StatsSection />
