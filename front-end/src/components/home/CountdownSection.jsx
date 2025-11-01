@@ -23,8 +23,8 @@ const FlipDigit = ({ value, label }) => {
   }, [value]);
 
   return (
-    <div className="relative w-full">
-      <div className="relative bg-gradient-to-br from-slate-800/90 via-slate-900/90 to-slate-800/90 backdrop-blur-xl border border-yellow-500/20 rounded-2xl p-4 md:p-6 lg:p-8 overflow-hidden transition-all duration-300 hover:border-yellow-500/40 hover:shadow-2xl hover:shadow-yellow-500/20 group">
+      <div className="relative w-full">
+      <div className="relative bg-gradient-to-br from-slate-800/90 via-slate-900/90 to-slate-800/90 backdrop-blur-xl border border-yellow-500/20 rounded-xl md:rounded-2xl p-2 sm:p-3 md:p-4 lg:p-6 xl:p-8 overflow-hidden transition-all duration-300 hover:border-yellow-500/40 hover:shadow-2xl hover:shadow-yellow-500/20 group">
         {/* Effet de brillance animé */}
         <motion.div
           className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
@@ -46,8 +46,8 @@ const FlipDigit = ({ value, label }) => {
         
         {/* Contenu */}
         <div className="relative z-10 text-center">
-          {/* Valeur avec effet de chute */}
-          <div className="relative h-12 md:h-16 lg:h-20 xl:h-24 flex items-center justify-center mb-2 md:mb-3 overflow-hidden">
+          {/* Valeur avec effet de chute - taille adaptative */}
+          <div className="relative h-10 sm:h-12 md:h-16 lg:h-20 xl:h-24 flex items-center justify-center mb-1.5 md:mb-2 lg:mb-3 overflow-hidden">
             <AnimatePresence mode="wait">
               <motion.div
                 key={displayValue}
@@ -68,21 +68,20 @@ const FlipDigit = ({ value, label }) => {
                   rotateX: 90,
                   transition: { duration: 0.3 }
                 }}
-                className="font-bold text-gradient-gold text-4xl md:text-5xl lg:text-6xl xl:text-7xl drop-shadow-lg leading-tight absolute inset-0 flex items-center justify-center"
+                className="font-bold text-gradient-gold text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl 2xl:text-7xl drop-shadow-lg leading-tight absolute inset-0 flex items-center justify-center"
               >
                 {(displayValue || 0).toString().padStart(2, '0')}
               </motion.div>
             </AnimatePresence>
           </div>
           
-          {/* Label */}
-          <div className="flex items-center justify-center gap-2">
-            <div className="h-px w-6 bg-gradient-to-r from-transparent via-yellow-500/50 to-transparent" />
-            <span className="text-gray-300 uppercase text-xs md:text-sm lg:text-base font-semibold tracking-widest">
-              <span className="hidden md:inline">{label}</span>
-              <span className="md:hidden">{label.charAt(0)}</span>
+          {/* Label - complet et adaptatif */}
+          <div className="flex items-center justify-center gap-1 md:gap-2">
+            <div className="h-px w-2 sm:w-3 md:w-4 lg:w-6 bg-gradient-to-r from-transparent via-yellow-500/50 to-transparent" />
+            <span className="text-gray-300 uppercase text-[8px] xs:text-[9px] sm:text-[10px] md:text-xs lg:text-sm xl:text-base font-semibold tracking-tight sm:tracking-wide md:tracking-wider lg:tracking-widest leading-tight">
+              {label}
             </span>
-            <div className="h-px w-6 bg-gradient-to-r from-transparent via-yellow-500/50 to-transparent" />
+            <div className="h-px w-2 sm:w-3 md:w-4 lg:w-6 bg-gradient-to-r from-transparent via-yellow-500/50 to-transparent" />
           </div>
         </div>
         
@@ -282,9 +281,9 @@ const CountdownSection = ({ onNavigate }) => {
             <span className="text-gradient-gold">Makona Awards 2025</span>
           </motion.h2>
 
-          {/* Chronomètre avec effet de chute des chiffres */}
-          <div className="w-full max-w-5xl px-4 mb-8 md:mb-10">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 lg:gap-6">
+          {/* Chronomètre avec effet de chute des chiffres - toujours sur une ligne */}
+          <div className="w-full max-w-6xl px-2 md:px-4 mb-8 md:mb-10">
+            <div className="grid grid-cols-4 gap-2 md:gap-3 lg:gap-4 xl:gap-6">
               {timeUnits.map((item, idx) => (
                 <motion.div
                   key={item.label}

@@ -181,7 +181,7 @@ const AwardCard = React.memo(({ award, onClick, onApply, index = 0 }) => {
 AwardCard.displayName = 'AwardCard';
 
 // Composant de groupe avec grille moderne
-const AwardGroup = React.memo(({ group, onNavigateToCategory }) => {
+const AwardGroup = React.memo(({ group, onNavigateToCategory, onNavigate }) => {
   const [isVisible, setIsVisible] = useState(false);
   const scrollContainerRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -229,10 +229,13 @@ const AwardGroup = React.memo(({ group, onNavigateToCategory }) => {
   }, [onNavigateToCategory]);
 
   const handleApplyClick = useCallback((award) => {
-    if (onNavigateToCategory) {
+    // Naviguer vers la page de candidature avec l'ID de la catégorie sélectionnée
+    if (onNavigate) {
+      onNavigate(`/candidature?category=${award.id}`);
+    } else if (onNavigateToCategory) {
       onNavigateToCategory({ ...award, apply: true });
     }
-  }, [onNavigateToCategory]);
+  }, [onNavigate, onNavigateToCategory]);
 
   return (
     <motion.div
@@ -559,11 +562,12 @@ const CategoriesSection = ({ onNavigateToCategory, onNavigate }) => {
             {/* Grille avec 2 catégories */}
             <div className="space-y-10 md:space-y-12 mb-12">
               {displayedGroups.map((group, index) => (
-                <AwardGroup
-                  key={group.classInfo.id}
-                  group={group}
-                  onNavigateToCategory={onNavigateToCategory}
-                />
+        <AwardGroup
+          key={group.classInfo.id}
+          group={group}
+          onNavigateToCategory={onNavigateToCategory}
+          onNavigate={onNavigate}
+        />
               ))}
             </div>
 

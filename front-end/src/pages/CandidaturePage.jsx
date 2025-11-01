@@ -103,10 +103,21 @@ const CandidaturePage = ({ onNavigate, onLogin }) => {
   }, []);
 
   useEffect(() => {
-    if (categoryId && isAuthenticated) {
+    if (categoryId && isAuthenticated && categories.length > 0) {
       loadCategory();
     }
-  }, [categoryId, isAuthenticated]);
+  }, [categoryId, isAuthenticated, categories.length]);
+
+  // Passer automatiquement à l'étape suivante quand la catégorie est chargée et l'utilisateur est authentifié
+  useEffect(() => {
+    if (selectedCategory && isAuthenticated && currentStep === STEPS.CATEGORY && categoryId) {
+      // Petit délai pour une meilleure UX
+      const timer = setTimeout(() => {
+        nextStep();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedCategory, isAuthenticated, currentStep, categoryId]);
 
   useEffect(() => {
     // Lorsqu'on arrive à l'étape FILES, initialiser le premier onglet actif
