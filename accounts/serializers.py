@@ -59,6 +59,14 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             password=password,
             **validated_data
         )
+        
+        # Créer et envoyer le code OTP après la création
+        from .services import OTPService
+        from .mailing.mail import send_otp_email
+        
+        otp = OTPService.create_otp(user)
+        send_otp_email(user, otp.code)
+        
         return user
 
 

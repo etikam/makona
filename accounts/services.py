@@ -50,33 +50,10 @@ class OTPService:
     def send_otp_email(user, otp_code):
         """
         Envoie le code OTP par email
+        Utilise le module mailing/mail.py
         """
-        subject = "Code de vérification - Makona Awards 2025"
-        message = f"""
-        Bonjour {user.get_full_name()},
-        
-        Votre code de vérification pour Makona Awards 2025 est : {otp_code}
-        
-        Ce code est valide pendant 10 minutes.
-        
-        Si vous n'avez pas demandé ce code, ignorez cet email.
-        
-        Cordialement,
-        L'équipe Makona Awards
-        """
-        
-        try:
-            send_mail(
-                subject=subject,
-                message=message,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[user.email],
-                fail_silently=False,
-            )
-            return True
-        except Exception as e:
-            print(f"Erreur envoi email: {e}")
-            return False
+        from .mailing.mail import send_otp_email as send_email
+        return send_email(user, otp_code)
     
     @staticmethod
     def verify_otp(user, code):

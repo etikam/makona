@@ -33,9 +33,13 @@ class UserRegistrationView(APIView):
         if serializer.is_valid():
             user = serializer.save()
             
-            # Créer et envoyer un code OTP
-            otp = OTPService.create_otp(user)
-            OTPService.send_otp_email(user, otp.code)
+            # Créer et envoyer un code OTP (déjà fait dans le serializer)
+            # On récupère l'OTP le plus récent pour la réponse
+            from .models import OneTimePassword
+            otp = OneTimePassword.objects.filter(
+                user=user,
+                is_used=False
+            ).order_by('-created_at').first()
             
             return Response({
                 'message': 'Utilisateur créé avec succès. Un code de vérification a été envoyé à votre email.',

@@ -4,6 +4,7 @@ import { HelmetProvider } from 'react-helmet-async';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { Toaster } from '@/components/ui/toaster';
+import ScrollToTop from '@/components/ScrollToTop';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import HomePage from '@/pages/HomePage';
@@ -122,6 +123,7 @@ function App() {
 
   return (
     <HelmetProvider>
+      <ScrollToTop />
       <div className="min-h-screen flex flex-col bg-makona-pattern">
         <Header 
           isAuthenticated={isAuthenticated} 
