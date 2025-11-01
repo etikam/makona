@@ -26,7 +26,10 @@ import {
   FileText,
   X,
   Trash2,
-  CheckCircle2
+  CheckCircle2,
+  Mail,
+  Shield,
+  Key
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
@@ -37,6 +40,7 @@ import categoryService from '@/services/categoryService';
 
 const STEPS = {
   AUTH: 0,
+  OTP_VERIFY: 0.5,
   CATEGORY: 1,
   PROFILE: 2,
   FILES: 3,
@@ -96,6 +100,12 @@ const CandidaturePage = ({ onNavigate, onLogin }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // États pour la vérification OTP
+  const [otpCode, setOtpCode] = useState(['', '', '', '', '', '']);
+  const [otpEmail, setOtpEmail] = useState('');
+  const [isVerifyingOTP, setIsVerifyingOTP] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   useEffect(() => {
     checkAuthentication();
@@ -244,7 +254,10 @@ const CandidaturePage = ({ onNavigate, onLogin }) => {
             title: "Inscription réussie !",
             description: "Un code de vérification a été envoyé à votre email",
           });
-          onNavigate(`/auth?email=${authData.email}&next=/candidature${categoryId ? `?category=${categoryId}` : ''}`);
+          // Passer à l'étape de vérification OTP
+          setOtpEmail(authData.email);
+          setCurrentStep(STEPS.OTP_VERIFY);
+          setResendCooldown(60); // Cooldown de 60 secondes
         } else {
           toast({
             title: "Erreur d'inscription",
@@ -340,6 +353,127 @@ const CandidaturePage = ({ onNavigate, onLogin }) => {
       });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // Gestion du cooldown pour le renvoi d'OTP
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => {
+        setResendCooldown(resendCooldown - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
+
+  // Gestion de la saisie OTP
+  const handleOtpChange = (index, value) => {
+    if (value.length > 1) return; // Un seul caractère par case
+    if (!/^\d*$/.test(value)) return; // Seulement des chiffres
+    
+    const newOtpCode = [...otpCode];
+    newOtpCode[index] = value;
+    setOtpCode(newOtpCode);
+    
+    // Passer automatiquement à la case suivante
+    if (value && index < 5) {
+      const nextInput = document.getElementById(`otp-${index + 1}`);
+      if (nextInput) nextInput.focus();
+    }
+  };
+
+  const handleOtpKeyDown = (index, e) => {
+    if (e.key === 'Backspace' && !otpCode[index] && index > 0) {
+      const prevInput = document.getElementById(`otp-${index - 1}`);
+      if (prevInput) prevInput.focus();
+    }
+  };
+
+  const handleOtpPaste = (e) => {
+    e.preventDefault();
+    const paste = e.clipboardData.getData('text').trim();
+    if (/^\d{6}$/.test(paste)) {
+      setOtpCode(paste.split(''));
+      const lastInput = document.getElementById('otp-5');
+      if (lastInput) lastInput.focus();
+    }
+  };
+
+  // Vérifier le code OTP
+  const handleVerifyOTP = async (e) => {
+    e.preventDefault();
+    const code = otpCode.join('');
+    
+    if (code.length !== 6) {
+      toast({
+        title: "Code incomplet",
+        description: "Veuillez entrer les 6 chiffres du code",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsVerifyingOTP(true);
+    try {
+      const result = await authService.verifyOTP(otpEmail, code);
+      
+      if (result.success) {
+        toast({
+          title: "Email vérifié !",
+          description: "Votre compte a été vérifié avec succès",
+        });
+        setIsAuthenticated(true);
+        setUser(result.user);
+        onLogin && onLogin(result.user);
+        setCurrentStep(STEPS.CATEGORY);
+      } else {
+        toast({
+          title: "Code invalide",
+          description: result.error || "Le code de vérification est incorrect",
+          variant: "destructive"
+        });
+        // Réinitialiser les champs OTP
+        setOtpCode(['', '', '', '', '', '']);
+        document.getElementById('otp-0')?.focus();
+      }
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de la vérification",
+        variant: "destructive"
+      });
+    } finally {
+      setIsVerifyingOTP(false);
+    }
+  };
+
+  // Renvoyer le code OTP
+  const handleResendOTP = async () => {
+    if (resendCooldown > 0) return;
+    
+    try {
+      const result = await authService.requestOTP(otpEmail);
+      if (result.success) {
+        toast({
+          title: "Code renvoyé",
+          description: "Un nouveau code a été envoyé à votre email",
+        });
+        setResendCooldown(60);
+        setOtpCode(['', '', '', '', '', '']);
+        document.getElementById('otp-0')?.focus();
+      } else {
+        toast({
+          title: "Erreur",
+          description: result.error || "Impossible de renvoyer le code",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue",
+        variant: "destructive"
+      });
     }
   };
 
