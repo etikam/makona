@@ -13,6 +13,8 @@ import VotePage from '@/pages/VotePage';
 import CategoryCandidatesPage from '@/pages/CategoryCandidatesPage';
 import CandidateDetailPage from '@/pages/CandidateDetailPage';
 import GalleryPage from '@/pages/GalleryPage';
+import CandidaturePage from '@/pages/CandidaturePage';
+import CategoriesPage from '@/pages/CategoriesPage';
 import CandidateProfile from '@/components/candidate/CandidateProfile';
 import AdminDashboard from '@/components/admin/AdminDashboard';
 import authService from '@/services/authService';
@@ -139,6 +141,8 @@ function App() {
               <Route path="/vote/:categoryId" element={<CategoryCandidatesPage onNavigate={handleNavigation} />} />
               <Route path="/candidate/:candidateId" element={<CandidateDetailPage onNavigate={handleNavigation} />} />
               <Route path="/gallery" element={<GalleryPage onNavigate={handleNavigation} />} />
+              <Route path="/candidature" element={<CandidaturePage onNavigate={handleNavigation} onLogin={handleLogin} />} />
+              <Route path="/categories" element={<CategoriesPage onNavigate={handleNavigation} />} />
               
               {/* Routes authentifiées - Candidat */}
               <Route 

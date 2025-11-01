@@ -1,7 +1,103 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Calendar, Clock, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import settingsService from '@/services/settingsService';
+
+// Composant pour un chiffre avec effet de chute
+const FlipDigit = ({ value, label }) => {
+  const [displayValue, setDisplayValue] = useState(value);
+  const [isFlipping, setIsFlipping] = useState(false);
+  const prevValueRef = useRef(value);
+
+  useEffect(() => {
+    if (prevValueRef.current !== value && value !== undefined) {
+      setIsFlipping(true);
+      setTimeout(() => {
+        setDisplayValue(value);
+        setIsFlipping(false);
+      }, 150);
+      prevValueRef.current = value;
+    }
+  }, [value]);
+
+  return (
+    <div className="relative w-full">
+      <div className="relative bg-gradient-to-br from-slate-800/90 via-slate-900/90 to-slate-800/90 backdrop-blur-xl border border-yellow-500/20 rounded-2xl p-4 md:p-6 lg:p-8 overflow-hidden transition-all duration-300 hover:border-yellow-500/40 hover:shadow-2xl hover:shadow-yellow-500/20 group">
+        {/* Effet de brillance animé */}
+        <motion.div
+          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+          style={{
+            background: 'linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%)',
+          }}
+          animate={{
+            x: ['-100%', '200%'],
+          }}
+          transition={{
+            duration: 2,
+            repeat: Infinity,
+            repeatDelay: 3,
+          }}
+        />
+        
+        {/* Gradient overlay */}
+        <div className="absolute top-0 left-0 right-0 h-1/3 bg-gradient-to-b from-yellow-500/20 via-amber-500/10 to-transparent" />
+        
+        {/* Contenu */}
+        <div className="relative z-10 text-center">
+          {/* Valeur avec effet de chute */}
+          <div className="relative h-12 md:h-16 lg:h-20 xl:h-24 flex items-center justify-center mb-2 md:mb-3 overflow-hidden">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={displayValue}
+                initial={{ y: -50, opacity: 0, rotateX: -90 }}
+                animate={{ 
+                  y: 0, 
+                  opacity: 1, 
+                  rotateX: 0,
+                  transition: {
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 20
+                  }
+                }}
+                exit={{ 
+                  y: 50, 
+                  opacity: 0, 
+                  rotateX: 90,
+                  transition: { duration: 0.3 }
+                }}
+                className="font-bold text-gradient-gold text-4xl md:text-5xl lg:text-6xl xl:text-7xl drop-shadow-lg leading-tight absolute inset-0 flex items-center justify-center"
+              >
+                {(displayValue || 0).toString().padStart(2, '0')}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+          
+          {/* Label */}
+          <div className="flex items-center justify-center gap-2">
+            <div className="h-px w-6 bg-gradient-to-r from-transparent via-yellow-500/50 to-transparent" />
+            <span className="text-gray-300 uppercase text-xs md:text-sm lg:text-base font-semibold tracking-widest">
+              <span className="hidden md:inline">{label}</span>
+              <span className="md:hidden">{label.charAt(0)}</span>
+            </span>
+            <div className="h-px w-6 bg-gradient-to-r from-transparent via-yellow-500/50 to-transparent" />
+          </div>
+        </div>
+        
+        {/* Points décoratifs aux coins */}
+        <div className="absolute top-2 left-2 w-2 h-2 bg-yellow-400/40 rounded-full blur-sm" />
+        <div className="absolute top-2 right-2 w-2 h-2 bg-amber-400/40 rounded-full blur-sm" />
+        <div className="absolute bottom-2 left-2 w-2 h-2 bg-yellow-400/40 rounded-full blur-sm" />
+        <div className="absolute bottom-2 right-2 w-2 h-2 bg-amber-400/40 rounded-full blur-sm" />
+      </div>
+      
+      {/* Lueur au hover */}
+      <div className="absolute -inset-0.5 bg-gradient-to-r from-yellow-500 via-amber-500 to-yellow-500 rounded-2xl opacity-0 group-hover:opacity-20 blur-xl transition-opacity duration-300 -z-10" />
+    </div>
+  );
+};
 
 const CountdownSection = ({ onNavigate }) => {
   const [timeLeft, setTimeLeft] = useState({});
@@ -57,63 +153,185 @@ const CountdownSection = ({ onNavigate }) => {
     return null;
   }
 
+  const timeUnits = [
+    { label: 'Jours', value: timeLeft.days, shortLabel: 'J' },
+    { label: 'Heures', value: timeLeft.hours, shortLabel: 'H' },
+    { label: 'Minutes', value: timeLeft.minutes, shortLabel: 'M' },
+    { label: 'Secondes', value: timeLeft.seconds, shortLabel: 'S' }
+  ];
+
   return (
-    <section className="relative py-8 md:py-12 lg:py-16 bg-gradient-to-b from-slate-900 via-blue-950/50 to-slate-900 overflow-hidden">
-      {/* Background decoration */}
-      <div className="absolute inset-0 bg-gradient-to-b from-blue-950/30 via-slate-900/70 to-slate-900"></div>
-      <div className="pointer-events-none absolute -left-32 top-1/4 w-[40rem] h-[40rem] rounded-full bg-gradient-to-br from-yellow-500/10 via-amber-400/5 to-transparent blur-3xl" />
-      <div className="pointer-events-none absolute right-0 top-10 w-[30rem] h-[30rem] rounded-full bg-gradient-to-tr from-blue-500/10 via-cyan-400/5 to-transparent blur-3xl" />
+    <section className="relative py-16 md:py-24 lg:py-32 overflow-hidden">
+      {/* Background sans parallaxe */}
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950/80" />
       
-      <div className="container mx-auto px-4 relative z-10">
+      {/* Orbes animés sans parallaxe */}
+      <motion.div
+        className="absolute top-0 left-1/4 w-96 h-96 bg-yellow-500/15 rounded-full blur-3xl"
+        animate={{
+          x: [0, 100, 0],
+          y: [0, 50, 0],
+          scale: [1, 1.2, 1],
+        }}
+        transition={{
+          duration: 20,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+      />
+      <motion.div
+        className="absolute top-1/2 right-1/4 w-80 h-80 bg-amber-500/12 rounded-full blur-3xl"
+        animate={{
+          x: [0, -80, 0],
+          y: [0, -40, 0],
+          scale: [1, 1.3, 1],
+        }}
+        transition={{
+          duration: 25,
+          repeat: Infinity,
+          ease: "easeInOut",
+          delay: 2,
+        }}
+      />
+      <motion.div
+        className="absolute bottom-0 left-1/2 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl"
+        animate={{
+          x: [0, 60, 0],
+          y: [0, -30, 0],
+          scale: [1, 1.4, 1],
+        }}
+        transition={{
+          duration: 18,
+          repeat: Infinity,
+          ease: "easeInOut",
+          delay: 4,
+        }}
+      />
+      
+      {/* Grille de motifs décoratifs */}
+      <div className="absolute inset-0 opacity-[0.03]">
+        <div className="absolute inset-0" style={{
+          backgroundImage: `linear-gradient(rgba(234, 179, 8, 0.1) 1px, transparent 1px),
+                            linear-gradient(90deg, rgba(234, 179, 8, 0.1) 1px, transparent 1px)`,
+          backgroundSize: '50px 50px',
+        }} />
+      </div>
+      
+      {/* Particules flottantes */}
+      <div className="absolute inset-0 overflow-hidden">
+        {[...Array(20)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute w-1 h-1 bg-yellow-400/30 rounded-full"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+            }}
+            animate={{
+              y: [0, -40, 0],
+              opacity: [0.2, 0.6, 0.2],
+              scale: [1, 1.5, 1],
+            }}
+            transition={{
+              duration: 4 + Math.random() * 3,
+              repeat: Infinity,
+              delay: Math.random() * 2,
+              ease: "easeInOut",
+            }}
+          />
+        ))}
+      </div>
+      
+      {/* Overlay avec gradient */}
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-slate-950/40 to-slate-950/80" />
+      
+      <div className="container mx-auto px-4 max-w-7xl relative z-10">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-100px' }}
           transition={{ duration: 0.8 }}
           className="flex flex-col items-center justify-center"
         >
-          {/* Titre */}
-          <motion.p
+          {/* Header avec icônes */}
+          <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-white text-2xl md:text-3xl lg:text-4xl font-bold mb-6 md:mb-8 text-center drop-shadow-lg"
+            className="flex items-center gap-3 mb-4"
           >
-            Participer aux Makona Awards 2025
-          </motion.p>
+            <div className="h-px w-16 bg-gradient-to-r from-transparent via-yellow-500 to-transparent" />
+            <div className="flex items-center gap-2">
+              <Calendar className="w-6 h-6 md:w-8 md:h-8 text-yellow-400" />
+              <Clock className="w-5 h-5 md:w-7 md:h-7 text-amber-400" />
+            </div>
+            <div className="h-px w-16 bg-gradient-to-r from-transparent via-yellow-500 to-transparent" />
+          </motion.div>
 
-          {/* Chronomètre */}
-          <div className="grid grid-cols-4 gap-3 md:gap-4 lg:gap-6 w-full max-w-4xl xl:max-w-5xl px-4 mb-6 md:mb-8">
-            {[{ label: 'Jours', value: timeLeft.days }, { label: 'Heures', value: timeLeft.hours }, { label: 'Minutes', value: timeLeft.minutes }, { label: 'Secondes', value: timeLeft.seconds }].map((item, idx) => (
-              <motion.div
-                key={item.label}
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.5, delay: 0.4 + idx * 0.1 }}
-                className="card-glass p-4 md:p-6 lg:p-8 text-center backdrop-blur-xl bg-slate-900/70 border-2 border-yellow-500/30 shadow-2xl hover:shadow-yellow-500/20 hover:border-yellow-500/50 transition-all duration-300"
-              >
-                <div className="font-bold text-gradient-gold text-3xl md:text-4xl lg:text-5xl xl:text-6xl mb-2 drop-shadow-lg">
-                  {(item.value || 0).toString().padStart(2, '0')}
-                </div>
-                <div className="text-white uppercase text-xs md:text-sm lg:text-base font-semibold tracking-wider">
-                  {item.label}
-                </div>
-              </motion.div>
-            ))}
+          {/* Titre */}
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold mb-4 md:mb-6 text-center"
+          >
+            <span className="text-white">Temps restant</span>
+            <br />
+            <span className="text-gradient-gold">Makona Awards 2025</span>
+          </motion.h2>
+
+          {/* Chronomètre avec effet de chute des chiffres */}
+          <div className="w-full max-w-5xl px-4 mb-8 md:mb-10">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 lg:gap-6">
+              {timeUnits.map((item, idx) => (
+                <motion.div
+                  key={item.label}
+                  initial={{ opacity: 0, y: 30, scale: 0.9 }}
+                  whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: 0.4 + idx * 0.1 }}
+                  whileHover={{ y: -8, scale: 1.05 }}
+                >
+                  <FlipDigit 
+                    value={item.value} 
+                    label={item.label}
+                    shortLabel={item.shortLabel}
+                  />
+                </motion.div>
+              ))}
+            </div>
           </div>
 
-          {/* Bouton Participer */}
+          {/* Bouton Participer avec style moderne */}
           <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.6 }}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.8 }}
           >
             <Button 
-              onClick={() => onNavigate('results')} 
-              className="btn-secondary w-fit px-6 md:px-8 py-3 md:py-4 rounded-full sm:rounded-lg shadow-lg hover:shadow-xl transition-all duration-300"
+              onClick={() => onNavigate('/candidature')} 
+              className="group relative bg-gradient-to-r from-yellow-500 via-amber-500 to-yellow-500 hover:from-yellow-400 hover:via-amber-400 hover:to-yellow-400 text-slate-900 font-bold px-8 md:px-12 py-4 md:py-5 text-base md:text-lg rounded-full shadow-2xl shadow-yellow-500/30 hover:shadow-yellow-500/50 transition-all duration-300 hover:scale-105 overflow-hidden"
             >
-              <span className="flex items-center justify-center gap-2">
-                <span className="text-base md:text-lg font-semibold">Participer</span>
+              <span className="relative z-10 flex items-center gap-2">
+                <Sparkles className="w-5 h-5" />
+                Participer maintenant
               </span>
+              
+              {/* Effet de brillance */}
+              <motion.div
+                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                animate={{
+                  x: ['-100%', '200%'],
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  repeatDelay: 2,
+                }}
+              />
             </Button>
           </motion.div>
         </motion.div>
@@ -123,4 +341,3 @@ const CountdownSection = ({ onNavigate }) => {
 };
 
 export default CountdownSection;
-

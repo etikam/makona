@@ -1,390 +1,324 @@
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Loader2, AlertCircle, Trophy } from 'lucide-react';
-    import { Button } from '@/components/ui/button';
-    import { useToast } from '@/components/ui/use-toast';
-    import categoryService from '@/services/categoryService';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Trophy, ArrowRight, Loader2, AlertCircle, Sparkles, Award, Image, Video, FileText, Music, Folder, Medal, DollarSign, ScrollText, Users, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/components/ui/use-toast';
+import categoryService from '@/services/categoryService';
 import categoryClassService from '@/services/categoryClassService';
 
-// Composant de carte de prix
-const AwardCard = React.memo(({ award, onClick, cardRef }) => {
+// Icônes pour les médias requis
+const MediaIcon = ({ type }) => {
+  const icons = {
+    photo: { Icon: Image, color: 'text-blue-400', bg: 'bg-blue-500/20', border: 'border-blue-500/30' },
+    video: { Icon: Video, color: 'text-red-400', bg: 'bg-red-500/20', border: 'border-red-500/30' },
+    portfolio: { Icon: Folder, color: 'text-green-400', bg: 'bg-green-500/20', border: 'border-green-500/30' },
+    audio: { Icon: Music, color: 'text-purple-400', bg: 'bg-purple-500/20', border: 'border-purple-500/30' },
+    documents: { Icon: FileText, color: 'text-orange-400', bg: 'bg-orange-500/20', border: 'border-orange-500/30' },
+  };
+  
+  const config = icons[type];
+  if (!config) return null;
+  
+  const { Icon, color, bg, border } = config;
+  
   return (
-    <div 
-      ref={cardRef}
-      className="flex-shrink-0" 
-      style={{ width: 'clamp(280px, 30vw, 320px)' }}
-      data-award-card
+    <div className={`w-4 h-4 rounded-md ${bg} ${border} border flex items-center justify-center flex-shrink-0`} title={type}>
+      <Icon className={`w-2.5 h-2.5 ${color}`} />
+    </div>
+  );
+};
+
+// Icônes pour les types de prix
+const AwardTypeIcon = ({ type }) => {
+  const icons = {
+    trophy: { Icon: Trophy, color: 'text-yellow-400', bg: 'bg-yellow-500/20', border: 'border-yellow-500/30', label: 'Trophée' },
+    certificate: { Icon: ScrollText, color: 'text-blue-400', bg: 'bg-blue-500/20', border: 'border-blue-500/30', label: 'Satisfecit' },
+    monetary: { Icon: DollarSign, color: 'text-green-400', bg: 'bg-green-500/20', border: 'border-green-500/30', label: 'Prime' },
+    plaque: { Icon: Medal, color: 'text-amber-400', bg: 'bg-amber-500/20', border: 'border-amber-500/30', label: 'Plaque' },
+  };
+  
+  const config = icons[type];
+  if (!config) return null;
+  
+  const { Icon, color, bg, border, label } = config;
+  
+  return (
+    <div className={`w-4 h-4 rounded-md ${bg} ${border} border flex items-center justify-center flex-shrink-0`} title={label}>
+      <Icon className={`w-2.5 h-2.5 ${color}`} />
+    </div>
+  );
+};
+
+// Carte de prix compacte avec informations
+const AwardCard = React.memo(({ award, onClick, onApply, index = 0 }) => {
+  // Médias requis
+  const requiredMedia = [];
+  if (award.requires_photo) requiredMedia.push('photo');
+  if (award.requires_video) requiredMedia.push('video');
+  if (award.requires_portfolio) requiredMedia.push('portfolio');
+  if (award.requires_audio) requiredMedia.push('audio');
+  if (award.requires_documents) requiredMedia.push('documents');
+  
+  // Types de prix
+  const awardTypes = [];
+  if (award.awards_trophy) awardTypes.push('trophy');
+  if (award.awards_certificate) awardTypes.push('certificate');
+  if (award.awards_monetary) awardTypes.push('monetary');
+  if (award.awards_plaque) awardTypes.push('plaque');
+  
+  // Nombre de candidats
+  const candidatesCount = award.candidatures_count || award.approved_candidates_count || 0;
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05, duration: 0.4 }}
+      whileHover={{ y: -6, scale: 1.02 }}
+      className="group relative h-full w-full max-w-[420px] mx-auto"
     >
-      <div className="card-glass h-full flex flex-col overflow-hidden border-transparent hover:border-yellow-500/20 transition-colors">
-        {/* Header avec icône trophée */}
-        <div className="relative h-44 md:h-48 flex items-center justify-center bg-gradient-to-br from-yellow-500/20 via-amber-500/10 to-yellow-500/20">
-          <Trophy className="w-20 h-20 text-yellow-400 opacity-70" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
+      <div className="h-full w-full bg-gradient-to-br from-slate-800/80 via-slate-900/80 to-slate-800/80 backdrop-blur-xl border border-yellow-500/10 rounded-xl overflow-hidden transition-all duration-300 hover:border-yellow-500/30 hover:shadow-xl hover:shadow-yellow-500/10">
+        {/* Header compact avec icône trophée */}
+        <div className="relative h-28 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/25 via-amber-500/15 to-yellow-600/10" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+          
+          {/* Effet de brillance animé */}
+          <motion.div
+            className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+            style={{
+              background: 'linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%)',
+            }}
+            animate={{
+              x: ['-100%', '200%'],
+            }}
+            transition={{
+              duration: 2,
+              repeat: Infinity,
+              repeatDelay: 3,
+            }}
+          />
+          
+          {/* Icône trophée */}
+          <div className="relative h-full flex items-center justify-center">
+            <Trophy className="w-12 h-12 text-yellow-400/80 drop-shadow-md" />
+          </div>
         </div>
 
-        {/* Contenu */}
-        <div className="p-5 md:p-6 flex flex-col flex-grow bg-slate-900/50">
-          <h4 className="text-lg font-bold text-white mb-2 line-clamp-2">
+        {/* Contenu compact et centré */}
+        <div className="p-4 flex flex-col flex-grow items-center text-center">
+          <h4 className="text-base font-bold text-white mb-2 line-clamp-2 group-hover:text-yellow-400 transition-colors">
             {award.name}
           </h4>
-          <p className="text-xs text-gray-400 mb-4 line-clamp-3 flex-grow">
-            {award.description || 'Lorem Ipsum is simply dummy text of the printing and typesetting industry.'}
+          
+          <p className="text-xs text-gray-400 mb-3 line-clamp-1 leading-relaxed px-1">
+            {award.description ? (award.description.length > 60 ? award.description.substring(0, 57) + '...' : award.description) : 'Prix prestigieux'}
           </p>
-          <Button 
-            onClick={onClick} 
-            className="btn-secondary mt-auto bg-slate-800/50 border-slate-700/50 text-gray-300 hover:bg-slate-800"
-          >
-            Voir les candidats
-          </Button>
+
+          {/* Médias requis et Types de prix - sur une seule ligne séparés par une barre */}
+          {(requiredMedia.length > 0 || awardTypes.length > 0) && (
+            <div className="mb-2 w-full flex items-center justify-center gap-2 flex-nowrap overflow-x-auto scrollbar-hide">
+              {/* Médias requis */}
+              {requiredMedia.length > 0 && (
+                <>
+                  {requiredMedia.map((media, idx) => (
+                    <MediaIcon key={idx} type={media} />
+                  ))}
+                </>
+              )}
+              
+              {/* Barre verticale de séparation */}
+              {(requiredMedia.length > 0 && awardTypes.length > 0) && (
+                <div className="h-4 w-px bg-gray-600/50 mx-1 flex-shrink-0" />
+              )}
+              
+              {/* Types de prix */}
+              {awardTypes.length > 0 && (
+                <>
+                  {awardTypes.map((type, idx) => (
+                    <AwardTypeIcon key={idx} type={type} />
+                  ))}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Nombre de candidats inscrits */}
+          <div className="mb-2 flex items-center justify-center gap-1.5 text-xs text-gray-400">
+            <Users className="w-3.5 h-3.5 text-yellow-400" />
+            <span>{candidatesCount} candidat{candidatesCount > 1 ? 's' : ''}</span>
+          </div>
+
+          {/* Actions - sur une seule ligne */}
+          <div className="flex gap-2 mt-auto pt-2 w-full">
+            <Button
+              onClick={(e) => {
+                e.stopPropagation();
+                onClick();
+              }}
+              className="flex-1 bg-gradient-to-r from-slate-700/50 to-slate-800/50 hover:from-slate-600/50 hover:to-slate-700/50 border border-slate-600/50 text-white font-medium py-1.5 text-[10px] transition-all duration-300 hover:shadow-lg hover:shadow-yellow-500/10"
+            >
+              Voir
+            </Button>
+            <Button
+              onClick={(e) => {
+                e.stopPropagation();
+                onApply();
+              }}
+              className="flex-1 bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-400 hover:to-amber-400 text-slate-900 font-semibold py-1.5 text-[10px] transition-all duration-300 hover:shadow-lg hover:shadow-yellow-500/30 hover:scale-105 flex items-center justify-center gap-1"
+            >
+              <Award className="w-3 h-3" />
+              Postuler
+            </Button>
+          </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 });
 
 AwardCard.displayName = 'AwardCard';
 
-// Hook pour gérer le scroll infini
-const useInfiniteScroll = (containerRef, cardsCount, cardRefsRef) => {
-  const scrollIntervalRef = useRef(null);
-  const isUserInteractingRef = useRef(false);
-  const userInteractionTimeoutRef = useRef(null);
-  const currentCardIndexRef = useRef(0);
+// Composant de groupe avec grille moderne
+const AwardGroup = React.memo(({ group, onNavigateToCategory }) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const scrollContainerRef = useRef(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
 
-  const getCardWidth = useCallback(() => {
-    const firstCard = cardRefsRef.current.get(0);
-    if (firstCard) {
-      return firstCard.offsetWidth + 24; // card width + gap (space-x-6 = 24px)
-    }
-    return 304; // fallback: 280px + 24px gap
-  }, [cardRefsRef]);
-
-  const scrollToCard = useCallback((index) => {
-    const container = containerRef.current;
-    if (!container || cardsCount <= 1) return;
-
-    const cardElement = cardRefsRef.current.get(index);
-    if (!cardElement) return;
-
-    const containerRect = container.getBoundingClientRect();
-    const cardRect = cardElement.getBoundingClientRect();
-    
-    // Centrer la carte dans le container
-    const scrollLeft = cardRect.left - containerRect.left + container.scrollLeft - (containerRect.width - cardRect.width) / 2;
-    
-    container.scrollTo({ 
-      left: Math.max(0, scrollLeft), 
-      behavior: 'smooth' 
-    });
-  }, [containerRef, cardRefsRef]);
-
-  const scrollToNext = useCallback(() => {
-    const container = containerRef.current;
-    if (!container || cardsCount <= 1) return;
-
-    const cardWidth = getCardWidth();
-    const maxScroll = cardWidth * cardsCount;
-    const totalScroll = maxScroll * 2;
-    const currentScroll = container.scrollLeft;
-
-    // Déterminer si on est dans les cartes originales ou dupliquées
-    const isInDuplicates = currentScroll >= maxScroll;
-    
-    // Calculer l'index actuel basé sur la position
-    let currentIndex = Math.round(currentScroll / cardWidth);
-    if (isInDuplicates) {
-      currentIndex = currentIndex - cardsCount;
-    }
-    
-    // Calculer le prochain index
-    const nextIndex = (currentIndex + 1) % cardsCount;
-    currentCardIndexRef.current = nextIndex;
-
-    // Si on va vers la dernière carte (index cardsCount - 1), utiliser les cartes dupliquées
-    // Sinon, rester dans les cartes originales si possible
-    if (nextIndex === cardsCount - 1 && currentScroll >= maxScroll - cardWidth * 0.5) {
-      // Aller vers la dernière carte dans les dupliquées
-      scrollToCard(nextIndex + cardsCount);
-    } else if (nextIndex === 0 && currentScroll >= maxScroll) {
-      // Si on revient à la première carte depuis les dupliquées, utiliser les originales
-      scrollToCard(0);
-    } else if (currentScroll >= maxScroll) {
-      // Rester dans les dupliquées si on y est déjà
-      scrollToCard(nextIndex + cardsCount);
-    } else {
-      // Rester dans les originales
-      scrollToCard(nextIndex);
-    }
-  }, [containerRef, cardsCount, getCardWidth, scrollToCard]);
-
-  const startAutoScroll = useCallback(() => {
-    if (scrollIntervalRef.current) return;
-    
-    scrollIntervalRef.current = setInterval(() => {
-      if (!isUserInteractingRef.current) {
-        scrollToNext();
-      }
-    }, 4000);
-  }, [scrollToNext]);
-
-  const stopAutoScroll = useCallback(() => {
-    if (scrollIntervalRef.current) {
-      clearInterval(scrollIntervalRef.current);
-      scrollIntervalRef.current = null;
-    }
+  useEffect(() => {
+    setIsVisible(true);
   }, []);
 
-  const handleUserInteraction = useCallback(() => {
-    isUserInteractingRef.current = true;
-    
-    if (userInteractionTimeoutRef.current) {
-      clearTimeout(userInteractionTimeoutRef.current);
-    }
-    
-    userInteractionTimeoutRef.current = setTimeout(() => {
-      isUserInteractingRef.current = false;
-    }, 5000);
+  // Vérifier si on peut scroller
+  const checkScrollability = useCallback(() => {
+    if (!scrollContainerRef.current) return;
+    const container = scrollContainerRef.current;
+    const { scrollLeft, scrollWidth, clientWidth } = container;
+    setCanScrollLeft(scrollLeft > 0);
+    setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10);
   }, []);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    
+    checkScrollability();
+    container.addEventListener('scroll', checkScrollability);
+    window.addEventListener('resize', checkScrollability);
+    
+    return () => {
+      container.removeEventListener('scroll', checkScrollability);
+      window.removeEventListener('resize', checkScrollability);
+    };
+  }, [checkScrollability, group.awards.length]);
 
   const scroll = useCallback((direction) => {
-    const container = containerRef.current;
-    if (!container || cardsCount <= 1) return;
-
-    const cardWidth = getCardWidth();
-    const maxScroll = cardWidth * cardsCount;
-    
-    // Trouver la carte la plus proche du centre
-    const containerRect = container.getBoundingClientRect();
-    const containerCenter = containerRect.left + containerRect.width / 2;
-    
-    let closestCardIndex = 0;
-    let minDistance = Infinity;
-    
-    // Vérifier d'abord si on est dans les cartes dupliquées
-    const currentScroll = container.scrollLeft;
-    const isInDuplicates = currentScroll >= maxScroll;
-    
-    // Limiter la recherche aux cartes visibles selon la zone de scroll
-    const searchStart = isInDuplicates ? cardsCount : 0;
-    const searchEnd = isInDuplicates ? cardsCount * 2 : cardsCount;
-    
-    for (let i = searchStart; i < searchEnd; i++) {
-      const card = cardRefsRef.current.get(i);
-      if (card) {
-        const cardRect = card.getBoundingClientRect();
-        const cardCenter = cardRect.left + cardRect.width / 2;
-        const distance = Math.abs(cardCenter - containerCenter);
-        
-        if (distance < minDistance) {
-          minDistance = distance;
-          closestCardIndex = i;
-        }
-      }
-    }
-
-    // Convertir l'index dupliqué en index original
-    let targetIndex = closestCardIndex;
-    if (targetIndex >= cardsCount) {
-      targetIndex = targetIndex - cardsCount;
-    }
-
-    // Calculer le nouvel index
-    let newIndex = targetIndex + direction;
-    if (newIndex < 0) newIndex = cardsCount - 1;
-    if (newIndex >= cardsCount) newIndex = 0;
-
-    currentCardIndexRef.current = newIndex;
-    
-    // Si on va vers la dernière carte, utiliser les cartes dupliquées pour permettre le scroll complet
-    if (newIndex === cardsCount - 1 && direction === 1) {
-      // Aller vers la dernière carte dans les dupliquées
-      scrollToCard(newIndex + cardsCount);
-    } else {
-      // Sinon, utiliser les cartes originales
-      scrollToCard(newIndex);
-    }
-    
-    handleUserInteraction();
-  }, [containerRef, cardsCount, getCardWidth, cardRefsRef, scrollToCard, handleUserInteraction]);
-
-  useEffect(() => {
-    return () => {
-      stopAutoScroll();
-      if (userInteractionTimeoutRef.current) {
-        clearTimeout(userInteractionTimeoutRef.current);
-      }
-    };
-  }, [stopAutoScroll]);
-
-  return { startAutoScroll, stopAutoScroll, scroll, handleUserInteraction };
-};
-
-// Composant de groupe de prix
-const AwardGroup = React.memo(({ group, onNavigateToCategory }) => {
-  const containerRef = useRef(null);
-  const cardRefsRef = useRef(new Map());
-
-  const { startAutoScroll, stopAutoScroll, scroll, handleUserInteraction } = useInfiniteScroll(
-    containerRef, 
-    group.awards.length,
-    cardRefsRef
-  );
-
-  // Centrer la première carte au démarrage
-  useEffect(() => {
-    const container = containerRef.current;
-    const firstCard = cardRefsRef.current.get(0);
-    
-    if (container && firstCard && group.awards.length > 0) {
-      // Attendre que les cartes soient rendues et que les dimensions soient calculées
-      const timer = setTimeout(() => {
-        const containerRect = container.getBoundingClientRect();
-        const cardRect = firstCard.getBoundingClientRect();
-        
-        if (containerRect.width > 0 && cardRect.width > 0) {
-          // Centrer la première carte dans le container visible
-          const cardWidth = firstCard.offsetWidth;
-          const containerWidth = containerRect.width;
-          
-          // Position actuelle de la carte par rapport au container
-          const cardPosition = cardRect.left - containerRect.left + container.scrollLeft;
-          
-          // Calculer le scrollLeft nécessaire pour centrer
-          const scrollLeft = cardPosition - (containerWidth - cardWidth) / 2;
-          
-          // S'assurer que le scroll ne dépasse pas les limites
-          const maxScroll = Math.max(0, container.scrollWidth - container.clientWidth);
-          const finalScrollLeft = Math.max(0, Math.min(scrollLeft, maxScroll));
-          
-          container.scrollLeft = finalScrollLeft;
-          
-          // Démarrer l'auto-scroll après centrage
-          if (group.awards.length > 1) {
-            setTimeout(() => startAutoScroll(), 1500);
-          }
-        }
-      }, 200);
-      
-      return () => clearTimeout(timer);
-    }
-    
-    return () => {
-      stopAutoScroll();
-    };
-  }, [group.awards.length, startAutoScroll, stopAutoScroll]);
-
-  // Gestion du reset du scroll pour la boucle infinie
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container || group.awards.length <= 1) return;
-
-    const handleScroll = () => {
-      const firstCard = cardRefsRef.current.get(0);
-      if (!firstCard) return;
-
-      const cardWidth = firstCard.offsetWidth + 24; // card + gap
-      const maxScroll = cardWidth * group.awards.length;
-      const totalScroll = maxScroll * 2; // cartes originales + dupliquées
-      
-      // Reset silencieux uniquement quand on atteint vraiment la fin des cartes dupliquées
-      // On utilise un seuil très proche de la fin pour permettre de voir la dernière carte complètement
-      const resetThreshold = totalScroll - (cardWidth * 0.1); // Reset seulement dans les 10% finaux
-      if (container.scrollLeft >= resetThreshold) {
-        // Reset vers les cartes originales en maintenant la position relative
-        const relativePosition = container.scrollLeft - maxScroll;
-        container.scrollLeft = relativePosition;
-      }
-      // Si on revient en arrière et qu'on est avant le début des cartes originales, 
-      // on saute vers les cartes dupliquées correspondantes
-      else if (container.scrollLeft < 0) {
-        container.scrollLeft = container.scrollLeft + maxScroll;
-      }
-    };
-
-    container.addEventListener('scroll', handleScroll, { passive: true });
-
-    return () => {
-      container.removeEventListener('scroll', handleScroll);
-    };
-  }, [group.awards.length]);
+    if (!scrollContainerRef.current) return;
+    const container = scrollContainerRef.current;
+    const scrollAmount = 400; // Largeur approximative d'une carte + gap
+    container.scrollBy({
+      left: direction * scrollAmount,
+      behavior: 'smooth'
+    });
+  }, []);
 
   const handleCardClick = useCallback((award) => {
     onNavigateToCategory(award);
   }, [onNavigateToCategory]);
 
-  const setCardRef = useCallback((index, element) => {
-    if (element) {
-      cardRefsRef.current.set(index, element);
+  const handleApplyClick = useCallback((award) => {
+    if (onNavigateToCategory) {
+      onNavigateToCategory({ ...award, apply: true });
     }
-  }, []);
+  }, [onNavigateToCategory]);
 
   return (
-    <div className="mb-12 md:mb-16">
-      {/* Header de la catégorie */}
-      <div className="flex flex-col sm:flex-row items-center justify-between mb-6 md:mb-8 gap-4">
-        <h3 className="text-[clamp(1.25rem,2.5vw,1.75rem)] font-semibold text-white text-center sm:text-left">
-          <span className="text-gray-400">Catégorie de prix:</span>{' '}
-          <span className="text-gradient-gold">{group.classInfo.name}</span>
-        </h3>
-        <div className="flex gap-2">
-          <Button 
-            onClick={() => scroll(-1)} 
-            variant="outline" 
-            size="icon" 
-            className="bg-slate-800/50 border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 hover:border-yellow-500 hover:text-yellow-300 transition-all"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </Button>
-          <Button 
-            onClick={() => scroll(1)} 
-            variant="outline" 
-            size="icon" 
-            className="bg-slate-800/50 border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10 hover:border-yellow-500 hover:text-yellow-300 transition-all"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </Button>
+    <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      animate={{ opacity: isVisible ? 1 : 0, y: isVisible ? 0 : 30 }}
+      transition={{ duration: 0.6 }}
+      className="w-full"
+    >
+      {/* Header du groupe */}
+      <div className="mb-6">
+        <div className="flex items-center gap-4 mb-2">
+          <div className="h-1 w-12 bg-gradient-to-r from-yellow-500 to-amber-500 rounded-full" />
+          <h3 className="text-2xl md:text-3xl font-bold text-white">
+            <span className="text-gray-400">Catégorie:</span>{' '}
+            <span className="text-gradient-gold">{group.classInfo.name}</span>
+          </h3>
         </div>
+        <p className="text-gray-400 ml-16 text-sm">
+          {group.awards.length} prix disponible{group.awards.length > 1 ? 's' : ''}
+        </p>
       </div>
 
-      {/* Container de défilement avec boucle infinie */}
-      <div className="flex justify-center w-full">
+      {/* Conteneur horizontal scrollable pour les prix - mobile et desktop */}
+      <div className="relative w-full">
+        {/* Flèche gauche */}
+        {canScrollLeft && (
+          <button
+            onClick={() => scroll(-1)}
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-slate-900/80 backdrop-blur-sm border border-yellow-500/30 rounded-full p-2 hover:bg-yellow-500/20 hover:border-yellow-500/50 transition-all shadow-lg"
+            aria-label="Défiler vers la gauche"
+          >
+            <ChevronLeft className="w-5 h-5 text-yellow-400" />
+          </button>
+        )}
+        
+        {/* Gradient de gauche */}
+        {canScrollLeft && (
+          <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-slate-950 to-transparent pointer-events-none z-[5]" />
+        )}
+        
+        {/* Conteneur scrollable */}
         <div 
-          ref={containerRef}
-          onWheel={handleUserInteraction}
-          onTouchStart={handleUserInteraction}
-          className="flex overflow-x-auto pb-6 -mx-4 px-4 space-x-6 scrollbar-hide w-full max-w-6xl"
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', scrollBehavior: 'smooth' }}
+          ref={scrollContainerRef}
+          className="w-full overflow-x-auto scrollbar-hide pb-2 -mx-4 px-4 scroll-smooth"
+          onScroll={checkScrollability}
         >
-          {/* Cartes originales */}
-          {group.awards.map((award, index) => (
-            <AwardCard 
-              key={`original-${award.id}`} 
-              award={award} 
-              onClick={() => handleCardClick(award)}
-              cardRef={(el) => setCardRef(index, el)}
-            />
-          ))}
-          
-          {/* Cartes dupliquées pour la boucle infinie */}
-          {group.awards.map((award, index) => (
-            <AwardCard 
-              key={`duplicate-${award.id}-${index}`} 
-              award={award} 
-              onClick={() => handleCardClick(award)}
-              cardRef={(el) => setCardRef(index + group.awards.length, el)}
-            />
-          ))}
+          <div className="flex gap-4 min-w-max">
+            <AnimatePresence>
+              {group.awards.map((award, index) => (
+                <div key={award.id} className="flex-shrink-0" style={{ width: 'min(420px, calc(100vw - 3rem))' }}>
+                  <AwardCard
+                    award={award}
+                    onClick={() => handleCardClick(award)}
+                    onApply={() => handleApplyClick(award)}
+                    index={index}
+                  />
+                </div>
+              ))}
+            </AnimatePresence>
+          </div>
         </div>
+        
+        {/* Gradient de droite */}
+        {canScrollRight && (
+          <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-slate-950 to-transparent pointer-events-none z-[5]" />
+        )}
+        
+        {/* Flèche droite */}
+        {canScrollRight && (
+          <button
+            onClick={() => scroll(1)}
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-slate-900/80 backdrop-blur-sm border border-yellow-500/30 rounded-full p-2 hover:bg-yellow-500/20 hover:border-yellow-500/50 transition-all shadow-lg"
+            aria-label="Défiler vers la droite"
+          >
+            <ChevronRight className="w-5 h-5 text-yellow-400" />
+          </button>
+        )}
       </div>
-    </div>
+    </motion.div>
   );
 });
 
 AwardGroup.displayName = 'AwardGroup';
 
 // Composant principal
-const CategoriesSection = ({ onNavigateToCategory }) => {
+const CategoriesSection = ({ onNavigateToCategory, onNavigate }) => {
   const { toast } = useToast();
   const [groupedAwards, setGroupedAwards] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -431,57 +365,256 @@ const CategoriesSection = ({ onNavigateToCategory }) => {
     loadAwards();
   }, [loadAwards]);
 
-      return (
-    <section className="py-20 md:py-24 lg:py-28 bg-slate-950/50">
-      <div className="container mx-auto px-4 max-w-7xl">
-        {/* Header */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-          className="text-center mb-12 md:mb-16"
-            >
-          <h2 className="text-[clamp(2rem,5vw,3.5rem)] font-bold mb-4">
-                  <span className="text-white">Découvrez les</span>{' '}
+  // Limiter à 2 catégories pour l'affichage
+  const displayedGroups = useMemo(() => groupedAwards.slice(0, 2), [groupedAwards]);
+  const hasMore = groupedAwards.length > 2;
+
+  return (
+    <section className="relative py-12 md:py-16 lg:py-20 overflow-hidden">
+      {/* Background spécial avec effets animés */}
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950" />
+      
+      {/* Orbes animés colorés */}
+      <motion.div
+        className="absolute top-0 left-1/4 w-96 h-96 bg-yellow-500/20 rounded-full blur-3xl"
+        animate={{
+          x: [0, 100, 0],
+          y: [0, 50, 0],
+          scale: [1, 1.2, 1],
+        }}
+        transition={{
+          duration: 20,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+      />
+      <motion.div
+        className="absolute top-1/2 right-1/4 w-80 h-80 bg-amber-500/15 rounded-full blur-3xl"
+        animate={{
+          x: [0, -80, 0],
+          y: [0, -40, 0],
+          scale: [1, 1.3, 1],
+        }}
+        transition={{
+          duration: 25,
+          repeat: Infinity,
+          ease: "easeInOut",
+          delay: 2,
+        }}
+      />
+      <motion.div
+        className="absolute bottom-0 left-1/2 w-72 h-72 bg-yellow-600/10 rounded-full blur-3xl"
+        animate={{
+          x: [0, 60, 0],
+          y: [0, -30, 0],
+          scale: [1, 1.4, 1],
+        }}
+        transition={{
+          duration: 18,
+          repeat: Infinity,
+          ease: "easeInOut",
+          delay: 4,
+        }}
+      />
+      
+      {/* Grille de motifs décoratifs */}
+      <div className="absolute inset-0 opacity-[0.03]">
+        <div className="absolute inset-0" style={{
+          backgroundImage: `linear-gradient(rgba(234, 179, 8, 0.1) 1px, transparent 1px),
+                            linear-gradient(90deg, rgba(234, 179, 8, 0.1) 1px, transparent 1px)`,
+          backgroundSize: '50px 50px',
+        }} />
+      </div>
+      
+      {/* Particules flottantes dorées */}
+      <div className="absolute inset-0 overflow-hidden">
+        {[...Array(15)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute w-1 h-1 bg-yellow-400/40 rounded-full"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+            }}
+            animate={{
+              y: [0, -30, 0],
+              opacity: [0.2, 0.6, 0.2],
+              scale: [1, 1.5, 1],
+            }}
+            transition={{
+              duration: 3 + Math.random() * 2,
+              repeat: Infinity,
+              delay: Math.random() * 2,
+              ease: "easeInOut",
+            }}
+          />
+        ))}
+      </div>
+      
+      {/* Rayons de lumière animés */}
+      <div className="absolute inset-0 overflow-hidden">
+        <motion.div
+          className="absolute top-0 left-1/2 w-px h-full bg-gradient-to-b from-transparent via-yellow-500/20 to-transparent"
+          animate={{
+            opacity: [0.2, 0.5, 0.2],
+          }}
+          transition={{
+            duration: 4,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+        />
+        <motion.div
+          className="absolute top-0 left-1/3 w-px h-full bg-gradient-to-b from-transparent via-amber-500/15 to-transparent"
+          animate={{
+            opacity: [0.1, 0.4, 0.1],
+          }}
+          transition={{
+            duration: 5,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 1,
+          }}
+        />
+        <motion.div
+          className="absolute top-0 right-1/3 w-px h-full bg-gradient-to-b from-transparent via-yellow-600/15 to-transparent"
+          animate={{
+            opacity: [0.1, 0.4, 0.1],
+          }}
+          transition={{
+            duration: 6,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 2,
+          }}
+        />
+      </div>
+      
+      {/* Couche de gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-slate-950/40 to-slate-950/80" />
+      
+      <div className="container mx-auto px-4 max-w-7xl relative z-10">
+        {/* Header de la section */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-100px' }}
+          transition={{ duration: 0.6 }}
+          className="mb-8 md:mb-10"
+        >
+          <div className="flex items-center gap-3 mb-3">
+            <div className="h-1 w-12 bg-gradient-to-r from-yellow-500 to-amber-500 rounded-full" />
+            <Trophy className="w-6 h-6 text-yellow-400" />
+            <div className="h-1 flex-1 bg-gradient-to-r from-yellow-500 to-transparent rounded-full" />
+          </div>
+          
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-2">
+            <span className="text-white">Découvrez les</span>{' '}
             <span className="text-gradient-gold">Prix</span>
-                </h2>
-          <p className="text-[clamp(1rem,1.8vw,1.25rem)] text-gray-300 max-w-3xl mx-auto">
-            Les prix sont regroupés par catégories de prix, faites défiler chaque groupe pour découvrir les candidats.
+          </h2>
+          
+          <p className="text-base md:text-lg text-gray-300 max-w-3xl leading-relaxed">
+            Explorez notre sélection de prix prestigieux, organisés par catégories. 
+            Chaque prix récompense l'excellence dans son domaine.
           </p>
-            </motion.div>
+        </motion.div>
 
         {/* Contenu */}
-            {isLoading ? (
-              <div className="flex items-center justify-center py-20">
-                <div className="text-center">
-                  <Loader2 className="w-8 h-8 animate-spin text-yellow-400 mx-auto mb-4" />
-                  <p className="text-gray-400">Chargement des catégories...</p>
-                </div>
-              </div>
-            ) : error ? (
-              <div className="flex items-center justify-center py-20">
-                <div className="text-center">
-                  <AlertCircle className="w-8 h-8 text-red-400 mx-auto mb-4" />
-                  <p className="text-red-400 mb-4">{error}</p>
-              <Button onClick={loadAwards} variant="outline">
-                    Réessayer
-                  </Button>
-                </div>
-              </div>
-            ) : (
-          <div className="space-y-12 md:space-y-16">
-            {groupedAwards.map((group) => (
-              <AwardGroup 
-                key={group.classInfo.id} 
-                group={group} 
-                onNavigateToCategory={onNavigateToCategory}
-              />
-            ))}
-                                </div>
-            )}
-          </div>
-        </section>
-      );
-    };
+        {isLoading ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex items-center justify-center py-24"
+          >
+            <div className="text-center">
+              <Loader2 className="w-12 h-12 animate-spin text-yellow-400 mx-auto mb-4" />
+              <p className="text-gray-400 text-lg">Chargement des catégories...</p>
+            </div>
+          </motion.div>
+        ) : error ? (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="flex items-center justify-center py-24"
+          >
+            <div className="text-center max-w-md">
+              <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+              <p className="text-red-400 mb-6 text-lg">{error}</p>
+              <Button onClick={loadAwards} variant="outline" className="border-red-500/50 text-red-400 hover:bg-red-500/10">
+                Réessayer
+              </Button>
+            </div>
+          </motion.div>
+        ) : displayedGroups.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center py-24"
+          >
+            <Trophy className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+            <p className="text-gray-400 text-lg">Aucune catégorie disponible pour le moment</p>
+          </motion.div>
+        ) : (
+          <>
+            {/* Grille avec 2 catégories */}
+            <div className="space-y-10 md:space-y-12 mb-12">
+              {displayedGroups.map((group, index) => (
+                <AwardGroup
+                  key={group.classInfo.id}
+                  group={group}
+                  onNavigateToCategory={onNavigateToCategory}
+                />
+              ))}
+            </div>
 
-    export default CategoriesSection;
+            {/* Bouton "Voir toutes les catégories" */}
+            {hasMore && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.3 }}
+                className="flex flex-col items-center gap-4 mt-12"
+              >
+                <div className="flex items-center gap-4 w-full max-w-md">
+                  <div className="flex-1 h-px bg-gradient-to-r from-transparent via-yellow-500/50 to-transparent" />
+                  <Trophy className="w-6 h-6 text-yellow-400" />
+                  <div className="flex-1 h-px bg-gradient-to-r from-transparent via-yellow-500/50 to-transparent" />
+                </div>
+                
+                <Button
+                  onClick={() => onNavigate && onNavigate('/categories')}
+                  className="group relative bg-gradient-to-r from-yellow-500 via-amber-500 to-yellow-500 hover:from-yellow-400 hover:via-amber-400 hover:to-yellow-400 text-slate-900 font-bold px-10 py-6 text-lg rounded-full shadow-2xl shadow-yellow-500/20 hover:shadow-yellow-500/40 transition-all duration-300 hover:scale-105 overflow-hidden"
+                >
+                  <span className="relative z-10 flex items-center gap-2">
+                    Voir toutes les catégories
+                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  </span>
+                  
+                  {/* Effet de brillance */}
+                  <motion.div
+                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                    animate={{
+                      x: ['-100%', '200%'],
+                    }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      repeatDelay: 2,
+                    }}
+                  />
+                </Button>
+                
+                <p className="text-sm text-gray-400 text-center max-w-md">
+                  Découvrez toutes les catégories de prix disponibles avec recherche et filtres avancés
+                </p>
+              </motion.div>
+            )}
+          </>
+        )}
+      </div>
+    </section>
+  );
+};
+
+export default CategoriesSection;

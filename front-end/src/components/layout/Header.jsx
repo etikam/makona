@@ -9,6 +9,7 @@ const Header = ({ isAuthenticated, user, onNavigate, onLogout }) => {
 
   const navItems = [
     { label: 'Accueil', page: '/' },
+    { label: 'Prix', page: '/categories' },
     { label: 'Voter', page: '/vote' },
     { label: 'Galerie', page: '/gallery' },
   ];

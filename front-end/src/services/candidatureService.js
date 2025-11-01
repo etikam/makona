@@ -103,21 +103,24 @@ class CandidatureService {
       // Ajouter les données de base
       formData.append('category', candidatureData.categoryId);
       
-      // Ajouter les fichiers
+      // Ajouter les fichiers selon le format attendu par Django REST Framework
+      // DRF attend les fichiers imbriqués dans un format spécifique
       if (candidatureData.files && candidatureData.files.length > 0) {
-        candidatureData.files.forEach((file, index) => {
-          formData.append(`files[${index}].file_type`, file.type);
-          formData.append(`files[${index}].file`, file.file);
-          if (file.title) {
-            formData.append(`files[${index}].title`, file.title);
+        candidatureData.files.forEach((fileData, index) => {
+          // Pour chaque fichier, créer une entrée dans FormData avec le bon format
+          // Format: files[index].file_type, files[index].file, etc.
+          const prefix = `files[${index}]`;
+          formData.append(`${prefix}.file_type`, fileData.type);
+          formData.append(`${prefix}.file`, fileData.file);
+          if (fileData.title) {
+            formData.append(`${prefix}.title`, fileData.title);
           }
-          if (file.order !== undefined) {
-            formData.append(`files[${index}].order`, file.order);
-          }
+          formData.append(`${prefix}.order`, fileData.order !== undefined ? fileData.order : index);
         });
       }
 
-      const response = await apiService.uploadFile('/candidatures/submit/', formData);
+      // Utiliser l'endpoint correct pour créer une candidature
+      const response = await apiService.post('/candidatures/my-candidatures/', formData);
       
       return {
         success: true,
