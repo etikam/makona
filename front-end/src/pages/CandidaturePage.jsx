@@ -253,15 +253,41 @@ const CandidaturePage = ({ onNavigate, onLogin }) => {
           toast({
             title: "Inscription réussie !",
             description: "Un code de vérification a été envoyé à votre email",
+            variant: "success"
           });
           // Passer à l'étape de vérification OTP
           setOtpEmail(authData.email);
           setCurrentStep(STEPS.OTP_VERIFY);
           setResendCooldown(60); // Cooldown de 60 secondes
         } else {
+          // Extraire le message d'erreur de manière compréhensible
+          let errorMessage = "Une erreur est survenue lors de l'inscription. Veuillez réessayer.";
+          
+          if (result.error) {
+            if (typeof result.error === 'string') {
+              errorMessage = result.error;
+            } else if (result.error.email) {
+              errorMessage = Array.isArray(result.error.email) 
+                ? result.error.email[0] 
+                : result.error.email;
+            } else if (result.error.non_field_errors) {
+              errorMessage = Array.isArray(result.error.non_field_errors)
+                ? result.error.non_field_errors[0]
+                : result.error.non_field_errors;
+            } else {
+              // Prendre le premier message d'erreur disponible
+              const firstKey = Object.keys(result.error)[0];
+              if (firstKey && result.error[firstKey]) {
+                errorMessage = Array.isArray(result.error[firstKey])
+                  ? result.error[firstKey][0]
+                  : result.error[firstKey];
+              }
+            }
+          }
+          
           toast({
             title: "Erreur d'inscription",
-            description: result.error || "Une erreur est survenue",
+            description: errorMessage,
             variant: "destructive"
           });
         }
@@ -336,6 +362,7 @@ const CandidaturePage = ({ onNavigate, onLogin }) => {
         toast({
           title: "Candidature soumise !",
           description: "Votre candidature a été soumise avec succès. Elle sera examinée par notre équipe.",
+          variant: "success"
         });
         onNavigate('/candidate/profile');
       } else {
@@ -421,6 +448,7 @@ const CandidaturePage = ({ onNavigate, onLogin }) => {
         toast({
           title: "Email vérifié !",
           description: "Votre compte a été vérifié avec succès",
+          variant: "success"
         });
         setIsAuthenticated(true);
         setUser(result.user);
@@ -457,6 +485,7 @@ const CandidaturePage = ({ onNavigate, onLogin }) => {
         toast({
           title: "Code renvoyé",
           description: "Un nouveau code a été envoyé à votre email",
+          variant: "success"
         });
         setResendCooldown(60);
         setOtpCode(['', '', '', '', '', '']);
@@ -618,6 +647,119 @@ const CandidaturePage = ({ onNavigate, onLogin }) => {
               transition={{ duration: 0.3 }}
               className="card-glass p-6 md:p-8 lg:p-10"
             >
+              {/* Étape OTP: Vérification du code */}
+              {currentStep === STEPS.OTP_VERIFY && (
+                <div className="max-w-md mx-auto">
+                  <div className="text-center mb-8">
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-yellow-400 to-amber-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-yellow-500/30"
+                    >
+                      <Mail className="w-8 h-8 md:w-10 md:h-10 text-slate-900" />
+                    </motion.div>
+                    <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
+                      Vérification de l'email
+                    </h2>
+                    
+                    {/* Message visible indiquant que l'email a été envoyé */}
+                    <div className="mb-6 p-4 md:p-6 bg-green-500/20 border-2 border-green-500/50 rounded-xl">
+                      <div className="flex items-start gap-3">
+                        <CheckCircle2 className="w-6 h-6 text-green-400 flex-shrink-0 mt-1" />
+                        <div className="text-left">
+                          <p className="text-green-400 font-semibold text-base md:text-lg mb-1">
+                            Email envoyé avec succès !
+                          </p>
+                          <p className="text-gray-300 text-sm md:text-base">
+                            Nous avons envoyé un code de vérification à 6 chiffres à votre adresse email :
+                          </p>
+                          <p className="text-yellow-400 font-bold text-base md:text-lg mt-2">{otpEmail}</p>
+                          <p className="text-gray-400 text-xs md:text-sm mt-2">
+                            Vérifiez votre boîte de réception et votre dossier spam.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <p className="text-gray-400 text-sm md:text-base mb-6">
+                      Entrez le code de vérification reçu par email
+                    </p>
+                  </div>
+
+                  <form onSubmit={handleVerifyOTP} className="space-y-6">
+                    {/* Champs OTP */}
+                    <div className="flex justify-center gap-2 md:gap-3">
+                      {[0, 1, 2, 3, 4, 5].map((index) => (
+                        <input
+                          key={index}
+                          id={`otp-${index}`}
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={1}
+                          value={otpCode[index]}
+                          onChange={(e) => handleOtpChange(index, e.target.value)}
+                          onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                          onPaste={index === 0 ? handleOtpPaste : undefined}
+                          className="w-12 h-12 md:w-14 md:h-14 text-center text-xl md:text-2xl font-bold bg-white/10 border-2 border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50 focus:border-yellow-500/50 transition-all"
+                          autoFocus={index === 0}
+                        />
+                      ))}
+                    </div>
+
+                    {/* Bouton de vérification */}
+                    <Button
+                      type="submit"
+                      disabled={isVerifyingOTP || otpCode.join('').length !== 6}
+                      className="w-full bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-400 hover:to-amber-400 text-slate-900 font-bold py-3 md:py-4 text-base md:text-lg rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isVerifyingOTP ? (
+                        <>
+                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                          Vérification...
+                        </>
+                      ) : (
+                        <>
+                          <Shield className="w-5 h-5 mr-2" />
+                          Vérifier le code
+                        </>
+                      )}
+                    </Button>
+
+                    {/* Lien pour renvoyer le code */}
+                    <div className="text-center">
+                      <p className="text-gray-400 text-sm mb-2">
+                        Vous n'avez pas reçu le code ?
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleResendOTP}
+                        disabled={resendCooldown > 0}
+                        className="text-yellow-400 hover:text-yellow-300 font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {resendCooldown > 0
+                          ? `Renvoyer le code dans ${resendCooldown}s`
+                          : 'Renvoyer le code'}
+                      </button>
+                    </div>
+
+                    {/* Retour à l'inscription */}
+                    <div className="text-center pt-4 border-t border-white/10">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCurrentStep(STEPS.AUTH);
+                          setOtpCode(['', '', '', '', '', '']);
+                        }}
+                        className="text-gray-400 hover:text-white text-sm transition-colors flex items-center justify-center gap-1 mx-auto"
+                      >
+                        <ArrowLeft className="w-4 h-4" />
+                        Retour à l'inscription
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
               {/* Étape 0: Authentification */}
               {currentStep === STEPS.AUTH && (
                 <div className="max-w-md mx-auto">
