@@ -30,9 +30,43 @@ class AuthService {
         email: response.email,
       };
     } catch (error) {
+      // Extraire le message d'erreur de manière compréhensible
+      let errorMessage = "Une erreur est survenue lors de l'inscription. Veuillez réessayer.";
+      
+      if (error.data || error.response?.data) {
+        const errorData = error.data || error.response.data;
+        
+        // Si c'est un objet avec des champs d'erreur (format Django REST Framework)
+        if (typeof errorData === 'object' && !errorData.message && !errorData.detail) {
+          // Vérifier d'abord le champ email
+          if (errorData.email && Array.isArray(errorData.email) && errorData.email.length > 0) {
+            errorMessage = errorData.email[0];
+          } else if (errorData.non_field_errors && Array.isArray(errorData.non_field_errors) && errorData.non_field_errors.length > 0) {
+            errorMessage = errorData.non_field_errors[0];
+          } else {
+            // Prendre le premier message d'erreur disponible
+            const firstKey = Object.keys(errorData)[0];
+            if (firstKey && errorData[firstKey]) {
+              errorMessage = Array.isArray(errorData[firstKey])
+                ? errorData[firstKey][0]
+                : errorData[firstKey];
+            }
+          }
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        } else if (errorData.detail) {
+          errorMessage = errorData.detail;
+        } else if (typeof errorData === 'string') {
+          errorMessage = errorData;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       return {
         success: false,
-        error: error.message,
+        error: errorMessage,
+        errorData: error.data || error.response?.data || error.message,
       };
     }
   }

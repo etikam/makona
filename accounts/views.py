@@ -31,23 +31,66 @@ class UserRegistrationView(APIView):
     def post(self, request):
         serializer = UserRegistrationSerializer(data=request.data)
         if serializer.is_valid():
-            user = serializer.save()
-            
-            # Créer et envoyer un code OTP (déjà fait dans le serializer)
-            # On récupère l'OTP le plus récent pour la réponse
-            from .models import OneTimePassword
-            otp = OneTimePassword.objects.filter(
-                user=user,
-                is_used=False
-            ).order_by('-created_at').first()
-            
-            return Response({
-                'message': 'Utilisateur créé avec succès. Un code de vérification a été envoyé à votre email.',
-                'user_id': user.id,
-                'email': user.email
-            }, status=status.HTTP_201_CREATED)
+            try:
+                user = serializer.save()
+                
+                # Créer et envoyer un code OTP (déjà fait dans le serializer)
+                # On récupère l'OTP le plus récent pour la réponse
+                from .models import OneTimePassword
+                otp = OneTimePassword.objects.filter(
+                    user=user,
+                    is_used=False
+                ).order_by('-created_at').first()
+                
+                return Response({
+                    'message': 'Utilisateur créé avec succès. Un code de vérification a été envoyé à votre email.',
+                    'user_id': user.id,
+                    'email': user.email
+                }, status=status.HTTP_201_CREATED)
+            except Exception as e:
+                # Gérer les erreurs d'unicité et autres erreurs techniques
+                error_message = str(e).lower()
+                if 'email' in error_message and ('unique' in error_message or 'déjà' in error_message or 'already exists' in error_message):
+                    return Response({
+                        'email': ['Cette adresse email est déjà utilisée. Veuillez utiliser une autre adresse email ou vous connecter avec ce compte.']
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                elif 'username' in error_message and ('unique' in error_message or 'already exists' in error_message):
+                    return Response({
+                        'username': ['Ce nom d\'utilisateur est déjà pris. Veuillez en choisir un autre.']
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                else:
+                    return Response({
+                        'non_field_errors': ['Une erreur est survenue lors de l\'inscription. Veuillez réessayer ou contacter le support.']
+                    }, status=status.HTTP_400_BAD_REQUEST)
         
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        # Transformer les erreurs du serializer en messages compréhensibles
+        errors = {}
+        for field, messages in serializer.errors.items():
+            if isinstance(messages, list):
+                # Remplacer les messages techniques par des messages simples
+                user_friendly_messages = []
+                for msg in messages:
+                    msg_str = str(msg).lower()
+                    if 'email' in msg_str and ('unique' in msg_str or 'already exists' in msg_str or 'existe déjà' in msg_str):
+                        user_friendly_messages.append('Cette adresse email est déjà utilisée. Veuillez utiliser une autre adresse email ou vous connecter avec ce compte.')
+                    elif 'objet utilisateur' in msg_str or 'user object' in msg_str:
+                        user_friendly_messages.append('Cette adresse email est déjà utilisée. Veuillez utiliser une autre adresse email ou vous connecter.')
+                    elif 'champ adresse email' in msg_str or 'email address field' in msg_str:
+                        user_friendly_messages.append('Cette adresse email est déjà utilisée. Veuillez utiliser une autre adresse email.')
+                    else:
+                        # Nettoyer le message des termes techniques
+                        clean_msg = str(msg)
+                        clean_msg = clean_msg.replace('objet Utilisateur', 'compte')
+                        clean_msg = clean_msg.replace('champ Adresse email', 'adresse email')
+                        clean_msg = clean_msg.replace('User object', 'compte')
+                        clean_msg = clean_msg.replace('Email address field', 'adresse email')
+                        clean_msg = clean_msg.replace('existe déjà', 'est déjà utilisée')
+                        user_friendly_messages.append(clean_msg)
+                errors[field] = user_friendly_messages if len(user_friendly_messages) == 1 else user_friendly_messages
+            else:
+                errors[field] = [str(messages)]
+        
+        return Response(errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class OTPRequestView(APIView):

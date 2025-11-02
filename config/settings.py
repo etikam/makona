@@ -275,7 +275,7 @@ EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
 EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
 EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='etiro2005@gmail.com')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='kdvp ivts wpef ejnv')  # À configurer dans le fichier .env
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='<noreply>etiro2005@gmail.com')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='<etiro2005@gmail.com')
 EMAIL_SUBJECT_PREFIX = config('EMAIL_SUBJECT_PREFIX', default='[Makona Awards]')
 
 # File Upload Settings
